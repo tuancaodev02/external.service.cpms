@@ -1,8 +1,7 @@
-import { EnumUserRole } from '@/core/constants/common.constant';
-import type { QueryPaging, QueryType, TypeOptionUpdateRecord } from '@/core/interfaces/common.interface';
+import type { QueryPaging } from '@/core/interfaces/common.interface';
 import type { ICourseEntity } from '@/database/entities/course.entity';
-import courseSchema from '@/database/schemas/course.schema';
-import type { UpdateQuery } from 'mongoose';
+import { prisma } from '@/database/prisma.client';
+import { Prisma } from '@prisma/client';
 import { BaseRepository } from './base-core.repository';
 
 export class CourseRepository extends BaseRepository {
@@ -11,122 +10,111 @@ export class CourseRepository extends BaseRepository {
     }
 
     public async getList(
-        queryData: QueryType,
+        where: Prisma.CourseWhereInput,
         queryPaging: QueryPaging,
     ): Promise<{ items: ICourseEntity[]; totalItems: number }> {
         const { skip, limit } = queryPaging;
-        const items = await courseSchema
-            .find(queryData)
-            .skip(skip)
-            .limit(limit)
-            .populate({
-                path: 'faculty',
-                model: 'faculties',
-                select: 'title code description durationStart durationEnd createdAt updatedAt',
-                transform: (doc) => {
-                    if (!doc) return null;
-                    const { _id, ...restOfProperties } = doc.toObject();
-                    return { id: _id, ...restOfProperties };
+        const [items, totalItems] = await Promise.all([
+            prisma.course.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    faculty: true,
+                    requirements: true,
                 },
-            })
-            .populate({
-                path: 'requirements',
-                model: 'course-requirements',
-                select: 'title code description createdAt updatedAt',
-                transform: (doc) => {
-                    if (!doc) return null;
-                    const { _id, ...restOfProperties } = doc.toObject();
-                    return { id: _id, ...restOfProperties };
-                },
-            });
-        const totalItems = await courseSchema.countDocuments(queryData);
+            }),
+            prisma.course.count({ where }),
+        ]);
 
-        return { items, totalItems };
+        return { items: items as unknown as ICourseEntity[], totalItems };
     }
 
     public async getById(id: string): Promise<ICourseEntity | null> {
-        return await courseSchema
-            .findById(id)
-            .populate({
-                path: 'faculty',
-                model: 'faculties',
-                select: 'title code description durationStart durationEnd createdAt updatedAt',
-                transform: (doc) => {
-                    if (!doc) return null;
-                    const { _id, ...restOfProperties } = doc.toObject();
-                    return { id: _id, ...restOfProperties };
-                },
-            })
-            .populate({
-                path: 'requirements',
-                model: 'course-requirements',
-                select: 'title code description createdAt updatedAt',
-                transform: (doc) => {
-                    if (!doc) return null;
-                    const { _id, ...restOfProperties } = doc.toObject();
-                    return { id: _id, ...restOfProperties };
-                },
-            });
+        return (await prisma.course.findUnique({
+            where: { id },
+            include: {
+                faculty: true,
+                requirements: true,
+            },
+        })) as unknown as ICourseEntity;
     }
 
     public async getByAll(): Promise<ICourseEntity[] | null> {
-        return await courseSchema.find();
+        return (await prisma.course.findMany()) as unknown as ICourseEntity[];
     }
 
     public async getByCode(code: string): Promise<ICourseEntity | null> {
-        return await courseSchema.findOne({ code });
+        return (await prisma.course.findUnique({ where: { code } })) as unknown as ICourseEntity;
     }
 
-    public async getMetadataQuery(options: TypeOptionUpdateRecord<ICourseEntity>): Promise<ICourseEntity | null> {
-        return await courseSchema.findOne(options.updateCondition, options.updateQuery);
+    public async getMetadataQuery(options: { updateCondition: Prisma.CourseWhereInput }): Promise<ICourseEntity | null> {
+        return (await prisma.course.findFirst({ where: options.updateCondition })) as unknown as ICourseEntity;
     }
 
-    public async getMetadataManyRecordQuery(options: TypeOptionUpdateRecord<ICourseEntity>): Promise<ICourseEntity[]> {
-        return await courseSchema.find(options.updateCondition, options.updateQuery);
+    public async getMetadataManyRecordQuery(options: { updateCondition: Prisma.CourseWhereInput }): Promise<ICourseEntity[]> {
+        return (await prisma.course.findMany({ where: options.updateCondition })) as unknown as ICourseEntity[];
     }
 
     public async getRoleRecord(role: number): Promise<ICourseEntity | null> {
-        return (await courseSchema.findOne({ role })) as any;
+        return null;
     }
 
     public async getUserRoleRecord(): Promise<ICourseEntity | null> {
-        return (await courseSchema.findOne({ role: EnumUserRole.USER })) as any;
+        return null;
     }
 
     public async getCourseMultipleId(requirementIds: string[]) {
-        return await courseSchema.find({ _id: { $in: requirementIds } });
+        return await prisma.course.findMany({ where: { id: { in: requirementIds } } });
     }
 
     public async create(payload: ICourseEntity): Promise<ICourseEntity | null> {
-        return await courseSchema.create({ _id: payload.id, ...payload });
+        const { id, ...rest } = payload;
+        const facultyId = (payload as any).facultyId;
+        const data: Prisma.CourseCreateInput = {
+            id,
+            title: rest.title,
+            code: rest.code,
+            durationStart: rest.durationStart,
+            durationEnd: rest.durationEnd,
+            quantity: rest.quantity,
+            description: rest.description,
+            faculty: { connect: { id: rest.faculty } },
+        };
+        const res = await prisma.course.create({ data });
+        return res as unknown as ICourseEntity;
     }
 
     public async update(payload: ICourseEntity): Promise<ICourseEntity | null> {
-        return await courseSchema.findByIdAndUpdate({ _id: payload.id }, payload, { new: true, upsert: true });
-    }
-
-    public async updateRecord(options: TypeOptionUpdateRecord<ICourseEntity>): Promise<ICourseEntity | null> {
-        return await courseSchema.findOneAndUpdate(options.updateCondition, options.updateQuery, {
-            new: true,
-            upsert: true,
+        const { id, ...data } = payload;
+        const res = await prisma.course.update({
+            where: { id },
+            data: data as any, // Simplified
         });
+        return res as unknown as ICourseEntity;
     }
 
-    public async updateManyRecord(options: TypeOptionUpdateRecord<ICourseEntity>): Promise<UpdateQuery<ICourseEntity>> {
-        return await courseSchema.updateMany(options.updateCondition, options.updateQuery, {
-            new: true,
-            upsert: true,
+    public async updateRecord(options: {
+        updateCondition: Prisma.CourseWhereUniqueInput;
+        updateQuery: Prisma.CourseUpdateInput;
+    }): Promise<ICourseEntity | null> {
+        return (await prisma.course.update({
+            where: options.updateCondition,
+            data: options.updateQuery,
+        })) as unknown as ICourseEntity;
+    }
+
+    public async updateManyRecord(options: {
+        updateCondition: Prisma.CourseWhereInput;
+        updateQuery: Prisma.CourseUpdateManyMutationInput;
+    }): Promise<Prisma.BatchPayload> {
+        return await prisma.course.updateMany({
+            where: options.updateCondition,
+            data: options.updateQuery as any, // updateMany data is stricter
         });
     }
 
     public async permanentlyDelete(id: string): Promise<ICourseEntity | null> {
-        return await courseSchema.findOneAndDelete({ _id: id });
+        return (await prisma.course.delete({ where: { id } })) as unknown as ICourseEntity;
     }
-
-    // public async permanentlyDeleteMultiple(
-    //     payload: IPermanentlyDeleteMultipleChannelModel,
-    // ): Promise<DeleteResult | null> {
-    //     console.log('payload', payload);
-    //     return await channelSchema.deleteMany({ serverId: payload.serverId, _id: { $in: payload.channelIds } });
-    // }
 }

@@ -1,5 +1,4 @@
 import type { Request } from 'express';
-import type { RootFilterQuery, UpdateQuery } from 'mongoose';
 
 export interface IResponseServer<T = any> {
     isSuccess: boolean;
@@ -23,8 +22,8 @@ export type IMessageError = {
 };
 
 export type TypeOptionUpdateRecord<T = any> = {
-    updateCondition: RootFilterQuery<T & { _id: string }>;
-    updateQuery: UpdateQuery<T & { _id: string }>;
+    updateCondition: any;
+    updateQuery: any;
 };
 
 export interface IPayloadToken {
@@ -39,9 +38,6 @@ export interface RequestAuthorized extends Request {
 }
 
 export interface QueryType {
-    $or?: Array<{
-        [key: string]: { $regex: string; $options: string };
-    }>;
     [key: string]: any;
 }
 

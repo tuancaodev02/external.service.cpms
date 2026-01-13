@@ -22,9 +22,7 @@ export class Authentication {
             req.user = verify;
             next();
         } catch (error: any) {
-            console.log(error);
-            const condition =
-                typeof error === 'object' && error.hasOwnProperty('name') && error.hasOwnProperty('message');
+            const condition = typeof error === 'object' && error.hasOwnProperty('name') && error.hasOwnProperty('message');
             const errorResponse = new ResponseHandler(
                 condition ? 403 : 500,
                 false,
@@ -51,9 +49,12 @@ export class Authentication {
             req.user = verify;
             next();
         } catch (error: any) {
-            console.log(error);
-            const condition =
-                typeof error === 'object' && error.hasOwnProperty('name') && error.hasOwnProperty('message');
+            console.error('[AUTH MIDDLEWARE - ADMIN] Error:', {
+                name: error?.name,
+                message: error?.message,
+                stack: error?.stack,
+            });
+            const condition = typeof error === 'object' && error.hasOwnProperty('name') && error.hasOwnProperty('message');
             const errorResponse = new ResponseHandler(
                 condition ? 403 : 500,
                 false,

@@ -1,6 +1,7 @@
 import { EnumUserRole } from '@/core/constants/common.constant';
 import type { IRoleEntity } from '@/database/entities/role.entity';
-import roleSchema from '@/database/schemas/role.schema';
+import { prisma } from '@/database/prisma.client';
+import { Prisma } from '@prisma/client';
 import { BaseRepository } from './base-core.repository';
 
 export class RoleRepository extends BaseRepository {
@@ -9,30 +10,47 @@ export class RoleRepository extends BaseRepository {
     }
 
     public async getList(): Promise<IRoleEntity[]> {
-        return await roleSchema.find().lean();
+        return (await prisma.role.findMany()) as unknown as IRoleEntity[];
     }
 
     public async getMultipleById(ids: string[]): Promise<IRoleEntity[]> {
-        return await roleSchema.find({ _id: ids });
+        return (await prisma.role.findMany({ where: { id: { in: ids } } })) as unknown as IRoleEntity[];
     }
 
     public async getById(id: string): Promise<IRoleEntity | null> {
-        return await roleSchema.findById(id);
+        return (await prisma.role.findUnique({ where: { id } })) as unknown as IRoleEntity;
     }
 
     public async getRoleRecord(role: number): Promise<IRoleEntity | null> {
-        return (await roleSchema.findOne({ role })) as any;
+        return (await prisma.role.findFirst({ where: { role } })) as unknown as IRoleEntity;
     }
 
     public async getUserRoleRecord(): Promise<IRoleEntity | null> {
-        return (await roleSchema.findOne({ role: EnumUserRole.USER })) as any;
+        return (await prisma.role.findFirst({ where: { role: EnumUserRole.USER } })) as unknown as IRoleEntity;
     }
 
     public async create(payload: IRoleEntity): Promise<IRoleEntity | null> {
-        return await roleSchema.create({ _id: payload.id, ...payload });
+        const data: Prisma.RoleCreateInput = {
+            id: payload.id,
+            title: payload.title,
+            role: payload.role,
+            description: payload.description,
+            // createdAt, updatedAt handled by default/updatedAt
+        };
+        const res = await prisma.role.create({ data });
+        return res as unknown as IRoleEntity;
     }
 
     public async update(payload: IRoleEntity): Promise<IRoleEntity | null> {
-        return await roleSchema.findByIdAndUpdate({ _id: payload.id }, payload, { new: true, upsert: true });
+        const { id, ...data } = payload;
+        const res = await prisma.role.update({
+            where: { id },
+            data: {
+                title: data.title,
+                role: data.role,
+                description: data.description,
+            },
+        });
+        return res as unknown as IRoleEntity;
     }
 }

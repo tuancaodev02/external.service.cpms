@@ -22,7 +22,6 @@ rootRouter.use('/course-requirement', courseRequirement);
 rootRouter.use('/user', userRouter);
 rootRouter.use('/news', newsRouter);
 rootRouter.use('/admissions', admissionsRouter);
-
 rootRouter.use(
     '*',
     (req, res, next) => {

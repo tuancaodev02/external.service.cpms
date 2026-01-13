@@ -19,9 +19,11 @@ export class AuthService {
     ): Promise<IResponseServer> {
         try {
             const account = await this.userRepository.getByEmail(payload.email);
+            console.log('account', account);
             if (account) {
                 return new ResponseHandler(200, true, 'User exits', payload);
             }
+
             const id = uuidV4();
             const hashPassword = await bcrypt.hash(payload.password, 10);
             const userRole = await this.roleRepository.getUserRoleRecord();
@@ -70,8 +72,7 @@ export class AuthService {
                     `The requested user with email "${payload.email}" dose not exist in the system.`,
                 );
             const isPasswordMatched = await bcrypt.compare(payload.password, user.password);
-            if (!isPasswordMatched)
-                return new ResponseHandler(401, false, 'Authentication Failed', null, `Incorrect email or password`);
+            if (!isPasswordMatched) return new ResponseHandler(401, false, 'Authentication Failed', null, `Incorrect email or password`);
             const roleRecords = await this.roleRepository.getMultipleById(user.roles);
             if (!roleRecords || !roleRecords.length)
                 return new ResponseHandler(

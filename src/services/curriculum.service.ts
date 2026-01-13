@@ -5,10 +5,11 @@ import type {
 } from '@/controllers/filters/curriculum.filter';
 import { ValidatorInput } from '@/core/helpers/class-validator.helper';
 import { ResponseHandler } from '@/core/helpers/response-handler.helper';
-import type { IResponseServer, QueryType } from '@/core/interfaces/common.interface';
-import { CurriculumModel, type ICurriculumEntity } from '@/database/entities/curriculum.entity';
+import type { IResponseServer } from '@/core/interfaces/common.interface';
+import { CurriculumModel } from '@/database/entities/curriculum.entity';
 import { CurriculumRepository } from '@/repositories/curriculum.repository';
 import { FacultyRepository } from '@/repositories/faculty.repository';
+import { Prisma } from '@prisma/client';
 import moment from 'moment-timezone';
 
 import { v4 as uuidV4 } from 'uuid';
@@ -23,25 +24,21 @@ export class CurriculumService {
         try {
             const { page = 1, limit = 10, keyword, durationStart, durationEnd } = payload;
             const skip = (page - 1) * limit;
-            let query: QueryType = {};
+            const where: Prisma.CurriculumWhereInput = {};
             if (keyword) {
-                query.$or = [
-                    { title: { $regex: keyword, $options: 'i' } },
-                    { code: { $regex: keyword, $options: 'i' } },
-                    { description: { $regex: keyword, $options: 'i' } },
-                ];
+                where.OR = [{ title: { contains: keyword } }, { code: { contains: keyword } }, { description: { contains: keyword } }];
             }
 
             if (durationStart && durationEnd) {
-                query.durationStart = { $gte: durationStart };
-                query.durationEnd = { $lte: durationEnd };
+                where.durationStart = { gte: durationStart };
+                where.durationEnd = { lte: durationEnd };
             }
             const paging = {
                 skip,
                 limit,
                 page,
             };
-            const { items, totalItems } = await this.curriculumRepository.getList(query, paging);
+            const { items, totalItems } = await this.curriculumRepository.getList(where, paging);
             const totalPages = Math.ceil(totalItems / limit);
 
             return new ResponseHandler(200, true, 'Get List curriculum successfully', {
@@ -91,16 +88,26 @@ export class CurriculumService {
             });
             const validation = await this.validateInputService.validate(newCurriculum);
             if (validation) return validation;
-            if (newCurriculum.faculties.length) {
-                await this.curriculumRepository.updateManyRecord({
-                    updateCondition: { _id: { $nin: newCurriculum.id } },
-                    updateQuery: {
-                        $pull: { faculties: { $in: newCurriculum.faculties } },
-                    },
-                });
-            }
+
+            // Prisma connection handling automatically moves faculties to this curriculum.
+            // No need to $pull.
+
             const newCurriculumRecord = await this.curriculumRepository.create(newCurriculum);
             if (!newCurriculumRecord) return new ResponseHandler(500, false, 'Can not create new curriculum', null);
+
+            // Manually update faculties to link to this curriculum? created Curriculum but did I link faculties?
+            // CurriculumRepository default create didn't include link logic.
+            // Manually link.
+            if (facultyIds.length > 0) {
+                await this.facultyRepository.updateManyRecord({
+                    updateCondition: { id: { in: facultyIds } },
+                    // @ts-ignore
+                    updateQuery: {
+                        curriculumId: newCurriculum.id,
+                    } as any,
+                });
+            }
+
             return new ResponseHandler(201, true, 'Create new curriculum successfully', newCurriculumRecord);
         } catch (error) {
             console.log('error', error);
@@ -114,14 +121,13 @@ export class CurriculumService {
             if (!curriculumRecord) {
                 return new ResponseHandler(404, true, 'Curriculum not found', curriculumRecord);
             }
+
             let facultyIds: string[] = [];
             if (payload.facultyIds && payload.facultyIds.length) {
                 const faculties = await this.facultyRepository.getFacultiesMultipleId(payload.facultyIds);
                 facultyIds = faculties.map((faculty) => faculty.id);
             }
-            const facultyIdsFiltered: string[] = curriculumRecord.faculties.filter(
-                (faculty) => !payload.facultyIds.includes(faculty),
-            );
+
             const newCurriculum = new CurriculumModel({
                 id: payload.id,
                 title: payload.title.trim() || curriculumRecord.title,
@@ -135,36 +141,28 @@ export class CurriculumService {
             });
             const validation = await this.validateInputService.validate(newCurriculum);
             if (validation) return validation;
-            await this.curriculumRepository.updateManyRecord({
-                updateCondition: { _id: { $nin: newCurriculum.id } },
+
+            // Remove $pull logic.
+
+            const curriculumRecordUpdated = await this.curriculumRepository.updateRecord({
+                updateCondition: { id: newCurriculum.id },
                 updateQuery: {
-                    $pull: { faculties: { $in: newCurriculum.faculties } },
+                    title: newCurriculum.title,
+                    description: newCurriculum.description,
+                    code: newCurriculum.code,
+                    durationStart: newCurriculum.durationStart,
+                    durationEnd: newCurriculum.durationEnd,
+                    updatedAt: newCurriculum.updatedAt,
+                    createdAt: newCurriculum.createdAt,
+                    // Relation update handled via updateMany below OR here if 1-n reverse supported?
+                    // Faculty has curriculumId. Curriculum does not have array of faculties in DB.
+                    // So we cannot update faculties here directly via `set` unless using nested update which is supported for 1-n?
+                    // Prisma `update` on Curriculum allows `faculties: { connect: [...] }`? YES.
+                    // So we CAN use `faculties: { connect: ... }`
+                    faculties: { connect: newCurriculum.faculties.map((id) => ({ id })) },
                 },
             });
-            let curriculumRecordUpdated: ICurriculumEntity | null = null;
-            curriculumRecordUpdated = await this.curriculumRepository.updateRecord({
-                updateCondition: { _id: newCurriculum.id },
-                updateQuery: {
-                    $set: {
-                        title: newCurriculum.title,
-                        description: newCurriculum.description,
-                        code: newCurriculum.code,
-                        durationStart: newCurriculum.durationStart,
-                        durationEnd: newCurriculum.durationEnd,
-                        updatedAt: newCurriculum.updatedAt,
-                        createdAt: newCurriculum.createdAt,
-                    },
-                    $addToSet: { faculties: { $each: newCurriculum.faculties } },
-                },
-            });
-            if (facultyIdsFiltered.length) {
-                curriculumRecordUpdated = await this.curriculumRepository.updateRecord({
-                    updateCondition: { _id: newCurriculum.id },
-                    updateQuery: {
-                        $pull: { faculties: { $in: facultyIdsFiltered } },
-                    },
-                });
-            }
+
             if (!curriculumRecordUpdated) return new ResponseHandler(500, false, 'Can not update curriculum', null);
             return new ResponseHandler(200, true, 'Update curriculum successfully', curriculumRecordUpdated);
         } catch (error) {

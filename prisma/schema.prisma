@@ -1,0 +1,229 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider     = "prisma-client-js"
+  output       = "../node_modules/.prisma/client"
+  moduleFormat = "esmodule"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DB_URL")
+}
+
+// User Model
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  birthday     String
+  phone        String
+  address      String
+  email        String   @unique
+  password     String
+  refreshToken String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  userRoles           UserRole[]
+  userCourses         UserCourse[]
+  courseRegistrations CourseRegister[]
+
+  @@map("users")
+}
+
+// Role Model
+model Role {
+  id          String   @id @default(uuid())
+  title       String
+  role        Int      @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+// UserRole (Many-to-Many relationship)
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// School Model
+model School {
+  id          String   @id @default(uuid())
+  title       String
+  code        String   @unique
+  address     String
+  email       String
+  phone       String
+  logoUrl     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("schools")
+}
+
+// Curriculum Model
+model Curriculum {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  code          String   @unique
+  durationStart String
+  durationEnd   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  faculties Faculty[]
+
+  @@map("curricula")
+}
+
+// Faculty Model
+model Faculty {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  code          String   @unique
+  durationStart String
+  durationEnd   String
+  thumbnailUrl  String?
+  curriculumId  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  curriculum Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  courses    Course[]
+
+  @@map("faculties")
+}
+
+// Course Model
+model Course {
+  id            String   @id @default(uuid())
+  title         String
+  code          String   @unique
+  durationStart String
+  durationEnd   String
+  quantity      Int
+  description   String?
+  facultyId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  faculty       Faculty             @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  requirements  CourseRequirement[]
+  userCourses   UserCourse[]
+  registrations CourseRegister[]
+
+  @@map("courses")
+}
+
+// CourseRequirement Model
+model CourseRequirement {
+  id          String   @id @default(uuid())
+  title       String
+  code        String
+  description String?
+  courseId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_requirements")
+}
+
+// UserCourse Model
+model UserCourse {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  status    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("user_courses")
+}
+
+// CourseRegister Model
+model CourseRegister {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("course_registers")
+}
+
+// News Model
+model News {
+  id          String   @id @default(uuid())
+  title       String
+  contents    String   @db.NVarChar(Max)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("news")
+}
+
+// Admissions Model
+model Admission {
+  id        String   @id @default(uuid())
+  name      String
+  birthday  String
+  phone     String
+  address   String
+  email     String
+  gender    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admissions")
+}
+
+// Contact Model
+model Contact {
+  id         String   @id @default(uuid())
+  department String
+  email      String
+  phone      String
+  message    String   @db.NVarChar(Max)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("contacts")
+}

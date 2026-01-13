@@ -4,9 +4,7 @@ import { Router } from 'express';
 
 const router: Router = Router();
 const admissionsController = new AdmissionsController();
-router
-    .route('/upgrade-to-student')
-    .post(Authentication.admin, admissionsController.upgradeToStudent.bind(admissionsController));
+router.route('/upgrade-to-student').post(Authentication.admin, admissionsController.upgradeToStudent.bind(admissionsController));
 router
     .route('/:id')
     .get(Authentication.admin, admissionsController.getById.bind(admissionsController))

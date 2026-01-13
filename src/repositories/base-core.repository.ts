@@ -1,23 +1,17 @@
-type TypeOptionsFormatterParams = {
-    fieldName?: string;
-    newFieldName?: string;
-};
-
 export class BaseRepository {
     constructor() {}
 
-    protected formatterObjectId(object: Object, options?: TypeOptionsFormatterParams) {
-        if (!options) options = {};
-        return structuredClone(object).renameKey(options.fieldName || 'id', options.newFieldName || '_id');
+    /**
+     * @deprecated No longer needed for Prisma. Returns object as is.
+     */
+    protected formatterObjectId(object: Object, options?: any) {
+        return object;
     }
 
-    protected formatterArrayIds<T extends Object>(array: Array<T>, options?: TypeOptionsFormatterParams) {
-        if (!options) options = {};
-        return structuredClone(array).map((item) =>
-            this.formatterObjectId(item, {
-                fieldName: options?.fieldName,
-                newFieldName: options?.newFieldName,
-            }),
-        );
+    /**
+     * @deprecated No longer needed for Prisma. Returns array as is.
+     */
+    protected formatterArrayIds<T extends Object>(array: Array<T>, options?: any) {
+        return array;
     }
 }

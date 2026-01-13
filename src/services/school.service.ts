@@ -78,18 +78,16 @@ export class SchoolService {
             const validation = await this.validateInputService.validate(newSchool);
             if (validation) return validation;
             const newSchoolRecord = await this.schoolRepository.updateRecord({
-                updateCondition: { _id: newSchool.id },
+                updateCondition: { id: newSchool.id },
                 updateQuery: {
-                    $set: {
-                        title: newSchool.title,
-                        description: newSchool.description,
-                        phone: newSchool.phone,
-                        email: newSchool.email,
-                        address: newSchool.address,
-                        code: newSchool.code,
-                        logoUrl: newSchool.logoUrl,
-                        updatedAt: moment().format(),
-                    },
+                    title: newSchool.title,
+                    description: newSchool.description,
+                    phone: newSchool.phone,
+                    email: newSchool.email,
+                    address: newSchool.address,
+                    code: newSchool.code,
+                    logoUrl: newSchool.logoUrl,
+                    updatedAt: moment().format(),
                 },
             });
             if (!newSchoolRecord) return new ResponseHandler(500, false, 'Can not update school', null);

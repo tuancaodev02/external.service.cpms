@@ -81,8 +81,7 @@ export class CourseRequirementService {
             const validation = await this.validateInputService.validate(newCourseRequirement);
             if (validation) return validation;
             const newFacultyRecord = await this.courseRequirementRepository.create(newCourseRequirement);
-            if (!newFacultyRecord)
-                return new ResponseHandler(500, false, 'Can not create new course requirement', null);
+            if (!newFacultyRecord) return new ResponseHandler(500, false, 'Can not create new course requirement', null);
             return new ResponseHandler(201, true, 'Create new course requirement successfully', newFacultyRecord);
         } catch (error) {
             console.log('error', error);
@@ -107,23 +106,16 @@ export class CourseRequirementService {
             const validation = await this.validateInputService.validate(courseRequirementInstance);
             if (validation) return validation;
             const courseRecordRequirementUpdated = await this.courseRequirementRepository.updateRecord({
-                updateCondition: { _id: courseRequirementInstance.id },
+                updateCondition: { id: courseRequirementInstance.id },
                 updateQuery: {
-                    $set: {
-                        title: courseRequirementInstance.title,
-                        description: courseRequirementInstance.description,
-                        code: courseRequirementInstance.code,
-                        course: courseRequirementInstance.course,
-                        updatedAt: courseRequirementInstance.updatedAt,
-                    },
+                    title: courseRequirementInstance.title,
+                    description: courseRequirementInstance.description,
+                    code: courseRequirementInstance.code,
+                    course: { connect: { id: courseRequirementInstance.course } },
+                    updatedAt: courseRequirementInstance.updatedAt,
                 },
             });
-            return new ResponseHandler(
-                200,
-                true,
-                'Update the course requirement successfully',
-                courseRecordRequirementUpdated,
-            );
+            return new ResponseHandler(200, true, 'Update the course requirement successfully', courseRecordRequirementUpdated);
         } catch (error) {
             console.log('error', error);
             return ResponseHandler.InternalServer();

@@ -1,15 +1,12 @@
-import type {
-    IPayloadCreateCourse,
-    IPayloadGetListCourse,
-    IPayloadUpdateCourse,
-} from '@/controllers/filters/course.filter';
+import type { IPayloadCreateCourse, IPayloadGetListCourse, IPayloadUpdateCourse } from '@/controllers/filters/course.filter';
 import { ValidatorInput } from '@/core/helpers/class-validator.helper';
 import { ResponseHandler } from '@/core/helpers/response-handler.helper';
-import type { IResponseServer, QueryType } from '@/core/interfaces/common.interface';
-import { CourseModel, type ICourseEntity } from '@/database/entities/course.entity';
+import type { IResponseServer } from '@/core/interfaces/common.interface';
+import { CourseModel } from '@/database/entities/course.entity';
 import { CourseRequirementRepository } from '@/repositories/course-requirement.repository';
 import { CourseRepository } from '@/repositories/course.repository';
 import { FacultyRepository } from '@/repositories/faculty.repository';
+import { Prisma } from '@prisma/client';
 import moment from 'moment-timezone';
 import { v4 as uuidV4 } from 'uuid';
 
@@ -24,25 +21,22 @@ export class CourseService {
         try {
             const { page = 1, limit = 10, keyword, durationStart, durationEnd } = payload;
             const skip = (page - 1) * limit;
-            let query: QueryType = {};
+            const where: Prisma.CourseWhereInput = {};
+
             if (keyword) {
-                query.$or = [
-                    { title: { $regex: keyword, $options: 'i' } },
-                    { code: { $regex: keyword, $options: 'i' } },
-                    { description: { $regex: keyword, $options: 'i' } },
-                ];
+                where.OR = [{ title: { contains: keyword } }, { code: { contains: keyword } }, { description: { contains: keyword } }];
             }
 
             if (durationStart && durationEnd) {
-                query.durationStart = { $gte: durationStart };
-                query.durationEnd = { $lte: durationEnd };
+                where.durationStart = { gte: durationStart };
+                where.durationEnd = { lte: durationEnd };
             }
             const paging = {
                 skip,
                 limit,
                 page,
             };
-            const { items, totalItems } = await this.courseRepository.getList(query, paging);
+            const { items, totalItems } = await this.courseRepository.getList(where, paging);
             const totalPages = Math.ceil(totalItems / limit);
 
             return new ResponseHandler(200, true, 'Get List curriculum successfully', {
@@ -91,17 +85,21 @@ export class CourseService {
             });
             const validation = await this.validateInputService.validate(newCourse);
             if (validation) return validation;
-            if (newCourse.requirements.length) {
-                await this.courseRepository.updateManyRecord({
-                    updateCondition: { _id: { $nin: newCourse.id } },
+
+            // Requirements are not linked in create method of repository, so we link them manually here.
+            const newCourseRecord = await this.courseRepository.create(newCourse);
+            if (!newCourseRecord) return new ResponseHandler(500, false, 'Can not create new course', null);
+
+            if (newCourse.requirements && newCourse.requirements.length > 0) {
+                await this.courseRequirementRepository.updateManyRecord({
+                    updateCondition: { id: { in: newCourse.requirements as string[] } },
                     updateQuery: {
-                        $pull: { requirements: { $in: newCourse.requirements } },
-                    },
+                        courseId: newCourseRecord.id,
+                    } as any,
                 });
             }
-            const newFacultyRecord = await this.courseRepository.create(newCourse);
-            if (!newFacultyRecord) return new ResponseHandler(500, false, 'Can not create new course', null);
-            return new ResponseHandler(201, true, 'Create new faculty successfully', newFacultyRecord);
+
+            return new ResponseHandler(201, true, 'Create new course successfully', newCourseRecord);
         } catch (error) {
             console.log('error', error);
             return ResponseHandler.InternalServer();
@@ -114,15 +112,16 @@ export class CourseService {
             if (!courseRecord) {
                 return new ResponseHandler(404, true, `Course with id ${payload.id} not found`, null);
             }
+
             let requirementsIds: string[] = [];
             if (payload.requirementIds && payload.requirementIds.length) {
                 const requirements = await this.courseRequirementRepository.getCourseMultipleId(payload.requirementIds);
                 requirementsIds = requirements.map((requirement) => requirement.id);
             }
-            const requirementsFiltered =
-                courseRecord.requirements.filter(
-                    (course) => payload.requirementIds && !payload.requirementIds.includes(course),
-                ) || [];
+            // Requirements Logic:
+            // The logic was: Filter requirements that are REMOVED (not in payload but in current).
+            // Pull removed ones. Add (set) new ones.
+
             const courseInstance = new CourseModel({
                 id: payload.id,
                 title: payload.title.trim(),
@@ -137,39 +136,35 @@ export class CourseService {
             });
             const validation = await this.validateInputService.validate(courseInstance);
             if (validation) return validation;
-            await this.courseRepository.updateManyRecord({
-                updateCondition: { _id: { $nin: courseInstance.id } },
+
+            // Update course fields
+            const courseRecordUpdated = await this.courseRepository.updateRecord({
+                updateCondition: { id: courseInstance.id },
                 updateQuery: {
-                    $pull: { requirements: { $in: courseInstance.requirements } },
+                    title: courseInstance.title,
+                    description: courseInstance.description,
+                    code: courseInstance.code,
+                    durationStart: courseInstance.durationStart,
+                    durationEnd: courseInstance.durationEnd,
+                    faculty: { connect: { id: courseInstance.faculty } },
+                    quantity: courseInstance.quantity,
+                    updatedAt: courseInstance.updatedAt,
+                    createdAt: courseInstance.createdAt,
                 },
             });
-            let courseRecordUpdated: ICourseEntity | null = null;
-            courseRecordUpdated = await this.courseRepository.updateRecord({
-                updateCondition: { _id: courseInstance.id },
-                updateQuery: {
-                    $set: {
-                        title: courseInstance.title,
-                        description: courseInstance.description,
-                        code: courseInstance.code,
-                        durationStart: courseInstance.durationStart,
-                        durationEnd: courseInstance.durationEnd,
-                        faculty: courseInstance.faculty,
-                        quantity: courseInstance.quantity,
-                        updatedAt: courseInstance.updatedAt,
-                        createdAt: courseInstance.createdAt,
-                    },
-                    $addToSet: { requirements: { $each: courseInstance.requirements } },
-                },
-            });
-            if (requirementsFiltered.length) {
-                courseRecordUpdated = await this.courseRepository.updateRecord({
-                    updateCondition: { _id: courseInstance.id },
+
+            if (!courseRecordUpdated) return new ResponseHandler(500, false, 'Can not update course record', null);
+
+            // Handle Requirements updates
+            if (requirementsIds.length > 0) {
+                await this.courseRequirementRepository.updateManyRecord({
+                    updateCondition: { id: { in: requirementsIds } },
                     updateQuery: {
-                        $pull: { requirements: { $in: requirementsFiltered } },
-                    },
+                        courseId: courseInstance.id,
+                    } as any,
                 });
             }
-            if (!courseRecordUpdated) return new ResponseHandler(500, false, 'Can not update course record', null);
+
             return new ResponseHandler(200, true, 'Update the course successfully', courseRecordUpdated);
         } catch (error) {
             console.log('error', error);

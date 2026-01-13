@@ -3,39 +3,57 @@
     "module": "./src/index.ts",
     "type": "module",
     "scripts": {
-        "dev": "bun --env-file=.env.development --hot ./src/index.ts",
+        "dev": "bun --env-file=.env --hot ./src/index.ts",
+        "dev:debug": "bun --env-file=.env --inspect ./src/index.ts",
         "start": "bun --env-file=.env ./api/index.js",
         "docker-build": "sudo docker build --pull -t external.services.cpms-docker-server .",
         "docker-run": "sudo docker run -d -p 3000:3000 external.services.cpms-docker-server",
         "build": "bun build ./src/index.ts --outdir ./api --target=node",
         "test": "bun test --preload ./src/index.ts",
-        "production": "bun --env-file=.env --watch ./api/index.js"
+        "prettier:format": "bun run prettier --write \"src/**/*.ts\"",
+        "prettier:format:all": "bun run prettier --write .",
+        "generate:keys": "bun ./scripts/generate-keys.ts",
+        "production": "bun --env-file=.env --watch ./api/index.js",
+        "prisma:generate": "prisma generate",
+        "prisma:studio": "prisma studio",
+        "prisma:format": "prisma format",
+        "prisma:validate": "prisma validate",
+        "prisma:migrate:dev": "prisma migrate dev",
+        "prisma:migrate:deploy": "prisma migrate deploy",
+        "prisma:migrate:reset": "prisma migrate reset",
+        "prisma:migrate:status": "prisma migrate status",
+        "prisma:db:push": "prisma db push",
+        "prisma:db:pull": "prisma db pull",
+        "prisma:db:seed": "bun ./prisma/seed.ts",
+        "postinstall": "prisma generate",
+        "db:reset": "prisma migrate reset && bun run prisma:db:seed",
+        "db:setup": "prisma generate && prisma migrate deploy && bun run prisma:db:seed"
     },
     "devDependencies": {
         "@types/bun": "latest",
-        "@types/cors": "^2.8.17",
-        "@types/jsonwebtoken": "^9.0.6",
-        "@types/nodemailer": "^6.4.15",
+        "@types/cors": "^2.8.19",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/nodemailer": "^6.4.21",
         "@types/uuid": "^9.0.8",
         "@types/web": "^0.0.162",
-        "tsc-alias": "^1.8.8"
-    },
-    "peerDependencies": {
-        "typescript": "^5.0.0"
+        "prettier": "^3.7.4",
+        "prisma": "6.8.1",
+        "tsc-alias": "^1.8.16",
+        "typescript": "^5.6.2"
     },
     "dependencies": {
+        "@prisma/client": "6.8.1",
         "@types/bcryptjs": "^2.4.6",
-        "@types/express": "^4.17.21",
+        "@types/express": "^4.17.25",
         "bcryptjs": "^2.4.3",
         "class-transformer": "^0.5.1",
-        "class-validator": "^0.14.1",
+        "class-validator": "^0.14.3",
         "cors": "^2.8.5",
         "es6-shim": "^0.35.8",
-        "express": "^4.18.2",
-        "jsonwebtoken": "^9.0.2",
-        "moment-timezone": "^0.5.45",
-        "mongoose": "^8.3.1",
-        "nodemailer": "^6.9.14",
+        "express": "^4.22.1",
+        "jsonwebtoken": "^9.0.3",
+        "moment-timezone": "^0.5.48",
+        "nodemailer": "^6.10.1",
         "reflect-metadata": "^0.2.2",
         "uuid": "^10.0.0"
     },
@@ -43,5 +61,8 @@
         "@/*": [
             "api/*"
         ]
+    },
+    "prisma": {
+        "seed": "bun ./prisma/seed.ts"
     }
 }

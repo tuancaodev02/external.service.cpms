@@ -1,10 +1,11 @@
 import type { IPayloadCreateNews, IPayloadGetListNews } from '@/controllers/filters/news.filter';
 import { ValidatorInput } from '@/core/helpers/class-validator.helper';
 import { ResponseHandler } from '@/core/helpers/response-handler.helper';
-import type { IResponseServer, QueryType } from '@/core/interfaces/common.interface';
+import type { IResponseServer } from '@/core/interfaces/common.interface';
 import { NewsModel } from '@/database/entities/news.entity';
 
 import { NewsRepository } from '@/repositories/news.repostiory';
+import { Prisma } from '@prisma/client';
 import moment from 'moment-timezone';
 import { v4 as uuidV4 } from 'uuid';
 
@@ -17,20 +18,16 @@ export class NewsService {
         try {
             const { page = 1, limit = 10, keyword } = payload;
             const skip = (page - 1) * limit;
-            let query: QueryType = {};
+            const where: Prisma.NewsWhereInput = {};
             if (keyword) {
-                query.$or = [
-                    { title: { $regex: keyword, $options: 'i' } },
-                    { contents: { $regex: keyword, $options: 'i' } },
-                    { description: { $regex: keyword, $options: 'i' } },
-                ];
+                where.OR = [{ title: { contains: keyword } }, { contents: { contains: keyword } }, { description: { contains: keyword } }];
             }
             const paging = {
                 skip,
                 limit,
                 page,
             };
-            const { items, totalItems } = await this.newsRepository.getList(query, paging);
+            const { items, totalItems } = await this.newsRepository.getList(where, paging);
             const totalPages = Math.ceil(totalItems / limit);
 
             return new ResponseHandler(200, true, 'Get List curriculum successfully', {
@@ -93,14 +90,12 @@ export class NewsService {
             const validation = await this.validateInputService.validate(newRecord);
             if (validation) return validation;
             const newRecordCreated = await this.newsRepository.updateRecord({
-                updateCondition: { _id: newRecord.id },
+                updateCondition: { id: newRecord.id },
                 updateQuery: {
-                    $set: {
-                        contents: newRecord.contents,
-                        title: newRecord.title,
-                        description: newRecord.description,
-                        updatedAt: newRecord.updatedAt,
-                    },
+                    contents: newRecord.contents,
+                    title: newRecord.title,
+                    description: newRecord.description,
+                    updatedAt: newRecord.updatedAt,
                 },
             });
             if (!newRecordCreated) return new ResponseHandler(500, false, 'Can not update news', null);

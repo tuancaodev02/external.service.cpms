@@ -4,10 +4,7 @@ import { Router } from 'express';
 
 const router: Router = Router();
 const schoolController = new SchoolController();
-router
-    .route('/:id')
-    .get(schoolController.getById.bind(schoolController))
-    .put(schoolController.update.bind(schoolController));
+router.route('/:id').get(schoolController.getById.bind(schoolController)).put(schoolController.update.bind(schoolController));
 router
     .route('/')
     .get(schoolController.getList.bind(schoolController))

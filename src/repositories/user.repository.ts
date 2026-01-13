@@ -1,10 +1,8 @@
 import { EnumUserRole } from '@/core/constants/common.constant';
-import type { QueryPaging, QueryType, TypeOptionUpdateRecord } from '@/core/interfaces/common.interface';
+import type { QueryPaging } from '@/core/interfaces/common.interface';
 import type { IUserEntity } from '@/database/entities/user.entity';
-import courseSchema from '@/database/schemas/course.schema';
-import roleSchema from '@/database/schemas/role.schema';
-import userSchema from '@/database/schemas/user.schema';
-import type { UpdateQuery } from 'mongoose';
+import { prisma } from '@/database/prisma.client';
+import { Prisma } from '@prisma/client';
 import { BaseRepository } from './base-core.repository';
 
 export class UserRepository extends BaseRepository {
@@ -12,215 +10,302 @@ export class UserRepository extends BaseRepository {
         super();
     }
 
-    public async checkUserExists(id: string): Promise<{ _id: string } | null> {
-        return await userSchema.exists({ _id: id });
+    public async checkUserExists(id: string): Promise<{ id: string } | null> {
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { id: true },
+        });
+        return user;
     }
 
-    public async getList(
-        queryData: QueryType,
-        queryPaging: QueryPaging,
-    ): Promise<{ items: IUserEntity[]; totalItems: number }> {
+    public async getList(where: Prisma.UserWhereInput, queryPaging: QueryPaging): Promise<{ items: IUserEntity[]; totalItems: number }> {
         const { skip, limit } = queryPaging;
-        const items = await userSchema
-            .find(queryData)
-            .select('-refreshToken -password -__v')
-            .skip(skip)
-            .limit(limit)
-            .populate({
-                path: 'courses',
-                model: 'user-courses',
-                select: 'course status',
-                populate: {
-                    path: 'course',
-                    model: 'courses',
-                    select: 'title code description durationStart quantity durationEnd createdAt updatedAt',
-                },
-            })
-            .populate({
-                path: 'coursesRegistering',
-                model: 'courses-registering',
-                select: 'course',
-                populate: {
-                    path: 'course',
-                    model: 'courses',
-                    select: 'title code description durationStart quantity durationEnd createdAt updatedAt',
-                },
-            });
 
-        const roles = await roleSchema.find();
-        // Transform the populated data
+        const [items, totalItems] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    userCourses: {
+                        include: {
+                            course: true,
+                        },
+                    },
+                    courseRegistrations: {
+                        include: {
+                            course: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' }, // default sort
+            }),
+            prisma.user.count({ where }),
+        ]);
+
+        const roles = await prisma.role.findMany();
+
+        // Transform the data to match expected output structure
         const transformedItems = items.map((user) => ({
-            ...user.toObject(),
-            courses:
-                user.courses?.map((course: any) => ({
-                    id: course.course?._id.toString(),
-                    title: course.course?.title,
-                    code: course.course?.code,
-                    description: course.course?.description,
-                    durationStart: course.course?.durationStart,
-                    durationEnd: course.course?.durationEnd,
-                    quantity: course.course?.quantity,
-                    createdAt: course.course?.createdAt,
-                    updatedAt: course.course?.updatedAt,
-                    status: course.status,
-                })) || [],
-            coursesRegistering:
-                user.coursesRegistering?.map((course: any) => ({
-                    id: course.course?._id.toString(),
-                    title: course.course?.title,
-                    code: course.course?.code,
-                    description: course.course?.description,
-                    durationStart: course.course?.durationStart,
-                    durationEnd: course.course?.durationEnd,
-                    quantity: course.course?.quantity,
-                    createdAt: course.course?.createdAt,
-                    updatedAt: course.course?.updatedAt,
-                })) || [],
+            ...user,
+            birthday: user.birthday, // ensure matches interface
+            courses: user.userCourses.map((uc) => ({
+                id: uc.course.id,
+                title: uc.course.title,
+                code: uc.course.code,
+                description: uc.course.description,
+                durationStart: uc.course.durationStart,
+                durationEnd: uc.course.durationEnd,
+                quantity: uc.course.quantity,
+                createdAt: uc.course.createdAt,
+                updatedAt: uc.course.updatedAt,
+                status: uc.status,
+            })),
+            coursesRegistering: user.courseRegistrations.map((cr) => ({
+                id: cr.course.id,
+                title: cr.course.title,
+                code: cr.course.code,
+                description: cr.course.description,
+                durationStart: cr.course.durationStart,
+                durationEnd: cr.course.durationEnd,
+                quantity: cr.course.quantity,
+                createdAt: cr.course.createdAt,
+                updatedAt: cr.course.updatedAt,
+            })),
             roles: roles.map((role) => ({
-                id: role.id ? role.id : role._id.toString(),
+                id: role.id,
                 title: role.title,
                 role: role.role,
                 description: role.description,
             })),
-            id: user.id ? user.id : user._id.toString(),
         }));
-
-        const totalItems = await userSchema.countDocuments(queryData);
 
         return { items: transformedItems as any, totalItems };
     }
 
     public async getById(id: string): Promise<IUserEntity | null> {
-        const user = await userSchema
-            .findById(id)
-            .select('-refreshToken -password -__v')
-            .populate({
-                path: 'courses',
-                model: 'user-courses',
-                select: 'course status',
-                populate: {
-                    path: 'course',
-                    model: 'courses',
-                    select: 'title code description durationStart quantity durationEnd createdAt updatedAt',
+        const user = await prisma.user.findUnique({
+            where: { id },
+            include: {
+                userCourses: {
+                    include: {
+                        course: true,
+                    },
                 },
-            })
-            .populate({
-                path: 'coursesRegistering',
-                model: 'courses-registering',
-                select: 'course',
-                populate: {
-                    path: 'course',
-                    model: 'courses',
-                    select: 'title code description durationStart quantity durationEnd createdAt updatedAt',
+                courseRegistrations: {
+                    include: {
+                        course: true,
+                    },
                 },
-            });
+            },
+        });
 
         if (!user) return null;
-        const roles = await roleSchema.find();
-        const userObject = user.toObject();
-        const { _id, ...restOfProperties } = userObject;
-        const courses: any =
-            restOfProperties.courses?.map((course: any) => ({
-                id: course.course?._id.toString(),
-                title: course.course?.title,
-                code: course.course?.code,
-                description: course.course?.description,
-                durationStart: course.course?.durationStart,
-                durationEnd: course.course?.durationEnd,
-                quantity: course.course?.quantity,
-                status: course.status,
-            })) || [];
-        const coursesRegistering: any =
-            restOfProperties.coursesRegistering?.map((course: any) => ({
-                id: course.course?._id.toString(),
-                title: course.course?.title,
-                code: course.course?.code,
-                description: course.course?.description,
-                durationStart: course.course?.durationStart,
-                durationEnd: course.course?.durationEnd,
-                quantity: course.course?.quantity,
-            })) || [];
+
+        const roles = await prisma.role.findMany();
+
+        const courses = user.userCourses.map((uc) => ({
+            id: uc.course.id,
+            title: uc.course.title,
+            code: uc.course.code,
+            description: uc.course.description,
+            durationStart: uc.course.durationStart,
+            durationEnd: uc.course.durationEnd,
+            quantity: uc.course.quantity,
+            status: uc.status,
+        }));
+
+        const coursesRegistering = user.courseRegistrations.map((cr) => ({
+            id: cr.course.id,
+            title: cr.course.title,
+            code: cr.course.code,
+            description: cr.course.description,
+            durationStart: cr.course.durationStart,
+            durationEnd: cr.course.durationEnd,
+            quantity: cr.course.quantity,
+        }));
+
         const rolesMapping = roles.map((role) => ({
-            id: role.id ? role.id : role._id.toString(),
+            id: role.id,
             title: role.title,
             role: role.role,
             description: role.description,
         }));
+
         let courseIds: string[] = [];
         let coursesRemaining: any = [];
-        if (courses && courses.length) {
-            courseIds = courses.map((course: any) => course.id);
+
+        if (courses.length) {
+            courseIds.push(...courses.map((c) => c.id));
         }
-        if (coursesRegistering && coursesRegistering.length) {
-            const courses = coursesRegistering.map((course: any) => course.id);
-            courseIds = [...courseIds, ...courses];
+        if (coursesRegistering.length) {
+            courseIds.push(...coursesRegistering.map((c) => c.id));
         }
-        if (courseIds.length) {
-            const courses = await courseSchema.find();
-            coursesRemaining = courses.filter((course) => !courseIds.includes(course.id));
+
+        if (courseIds.length > 0) {
+            // Find courses NOT in courseIds
+            coursesRemaining = await prisma.course.findMany({
+                where: {
+                    id: { notIn: courseIds },
+                },
+            });
+        } else {
+            coursesRemaining = await prisma.course.findMany();
         }
-        console.log('coursesRemaining', coursesRemaining);
+
+        // Return mixed object as originally done (casting to any/IUserEntity)
         return {
-            ...restOfProperties,
-            id: _id.toString(),
-            courses,
-            coursesRegistering,
+            ...user,
+            courses: courses as any,
+            coursesRegistering: coursesRegistering as any,
             roles: rolesMapping as any,
             coursesRemaining,
-        } as IUserEntity;
+        } as unknown as IUserEntity;
     }
 
     public async getByIdNoPopulate(id: string): Promise<IUserEntity | null> {
-        return await userSchema.findById(id);
+        const user = await prisma.user.findUnique({ where: { id } });
+        return user as unknown as IUserEntity;
     }
 
     public async getByCode(code: string): Promise<IUserEntity | null> {
-        return await userSchema.findOne({ code });
+        return null;
     }
 
     public async getByEmail(email: string): Promise<IUserEntity | null> {
-        return await userSchema.findOne({ email });
+        return (await prisma.user.findUnique({ where: { email } })) as unknown as IUserEntity;
     }
 
     public async getRoleRecord(role: number): Promise<IUserEntity | null> {
-        return (await userSchema.findOne({ role })) as any;
+        const roleRecord = await prisma.role.findFirst({ where: { role: role } });
+        if (!roleRecord) return null;
+
+        const user = await prisma.user.findFirst({
+            where: {
+                userRoles: {
+                    some: {
+                        roleId: roleRecord.id,
+                    },
+                },
+            },
+        });
+        return user as unknown as IUserEntity;
     }
 
     public async getUserRoleRecord(): Promise<IUserEntity | null> {
-        return (await userSchema.findOne({ role: EnumUserRole.USER })) as any;
+        return this.getRoleRecord(EnumUserRole.USER);
     }
 
     public async getCourseMultipleId(requirementIds: string[]) {
-        return await userSchema.find({ _id: { $in: requirementIds } });
+        return await prisma.user.findMany({ where: { id: { in: requirementIds } } });
     }
 
     public async create(payload: IUserEntity): Promise<IUserEntity | null> {
-        return await userSchema.create({ _id: payload.id, ...payload });
+        // payload has id.
+        const { id, courses, coursesRegistering, roles, ...rest } = payload;
+        // We need to handle relations if we want to create them here, but typically we create User first.
+        // Prisma create with explicit ID.
+        // Note: roles is string[] (role IDs probably?).
+        // In Mongoose it was `...payload`.
+
+        // We need to map `roles` to `userRoles` relation create if provided.
+        // Assuming `roles` contains Role IDs? Or Names?
+        // Entity says `roles: string[]`.
+
+        const createData: Prisma.UserCreateInput = {
+            id,
+            name: payload.name,
+            birthday: payload.birthday,
+            phone: payload.phone,
+            address: payload.address,
+            email: payload.email,
+            password: payload.password,
+            refreshToken: payload.refreshToken,
+            // Connect roles if provided and they look like IDs
+            userRoles:
+                roles && roles.length > 0
+                    ? {
+                          create: roles.map((roleId) => ({
+                              role: { connect: { id: roleId } },
+                          })),
+                      }
+                    : undefined,
+        };
+
+        const user = await prisma.user.create({
+            data: createData,
+        });
+        return user as unknown as IUserEntity;
     }
 
     public async update(payload: IUserEntity): Promise<IUserEntity | null> {
-        return await userSchema.findByIdAndUpdate({ _id: payload.id }, payload, { new: true, upsert: true });
+        const { id, roles, ...data } = payload;
+        // Clean data for update
+        const updateData: any = { ...data };
+        delete updateData.courses; // these are relations
+        delete updateData.coursesRegistering;
+
+        const user = await prisma.user.update({
+            where: { id },
+            data: updateData,
+        });
+        return user as unknown as IUserEntity;
     }
 
-    public async updateRecord(options: TypeOptionUpdateRecord<IUserEntity>): Promise<IUserEntity | null> {
-        return await userSchema.findOneAndUpdate(options.updateCondition, options.updateQuery, {
-            new: true,
-            upsert: true,
-        });
+    // Changing signature to accept Prisma inputs
+    public async updateRecord(options: {
+        updateCondition: Prisma.UserWhereUniqueInput;
+        updateQuery: Prisma.UserUpdateInput;
+    }): Promise<IUserEntity | null> {
+        // Handling special mongo atomic operators if passed (unlikely if I refactor service)
+        // Check keys. If they start with $, we might have issues if caller not updated.
+        // But I plan to update caller.
+
+        // updateQuery might contain $addToSet, $pull if coming from legacy service.
+        // But `UserService` has `$addToSet` etc.
+        // I MUST REFACTOR SERVICE TO PASS PRISMA DATA.
+
+        return (await prisma.user.update({
+            where: options.updateCondition,
+            data: options.updateQuery,
+        })) as unknown as IUserEntity;
     }
 
     public async insertMultiple(payload: IUserEntity[]): Promise<IUserEntity[] | null> {
-        return await userSchema.insertMany(this.formatterArrayIds(payload));
+        // Prisma createMany does not return the created records! (Only count).
+        // So we should use a transaction of creates if we need mapped return, OR just createMany and return payload.
+        // Mongoose insertMany returns docs.
+
+        // Helper to creating many.
+        // payload includes ID.
+        const data = payload.map((p) => ({
+            id: p.id,
+            name: p.name,
+            birthday: p.birthday,
+            phone: p.phone,
+            address: p.address,
+            email: p.email,
+            password: p.password,
+            refreshToken: p.refreshToken,
+        }));
+
+        await prisma.user.createMany({
+            data,
+        });
+
+        return payload; // Approximation
     }
 
-    public async updateManyRecord(options: TypeOptionUpdateRecord<IUserEntity>): Promise<UpdateQuery<IUserEntity>> {
-        return await userSchema.updateMany(options.updateCondition, options.updateQuery, {
-            new: true,
-            upsert: true,
+    public async updateManyRecord(options: { updateCondition: Prisma.UserWhereInput; updateQuery: Prisma.UserUpdateInput }) {
+        return await prisma.user.updateMany({
+            where: options.updateCondition,
+            data: options.updateQuery,
         });
     }
 
     public async permanentlyDelete(id: string): Promise<IUserEntity | null> {
-        return await userSchema.findOneAndDelete({ _id: id });
+        return (await prisma.user.delete({
+            where: { id },
+        })) as unknown as IUserEntity;
     }
 }

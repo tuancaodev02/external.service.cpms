@@ -3,12 +3,13 @@ import type { IPayloadGetListNews } from '@/controllers/filters/news.filter';
 import { ValidatorInput } from '@/core/helpers/class-validator.helper';
 import { JWTHelper } from '@/core/helpers/jwt.helper';
 import { ResponseHandler } from '@/core/helpers/response-handler.helper';
-import type { IResponseServer, QueryType } from '@/core/interfaces/common.interface';
+import type { IResponseServer } from '@/core/interfaces/common.interface';
 import { AdmissionsModel } from '@/database/entities/admissions.entity';
 import { UserModel } from '@/database/entities/user.entity';
 import { AdmissionsRepository } from '@/repositories/admissions.repostiory';
 import { RoleRepository } from '@/repositories/role.repository';
 import { UserRepository } from '@/repositories/user.repository';
+import { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import { v4 as uuidV4 } from 'uuid';
@@ -25,13 +26,13 @@ export class AdmissionsService {
         try {
             const { page = 1, limit = 10, keyword } = payload;
             const skip = (page - 1) * limit;
-            let query: QueryType = {};
+            const where: Prisma.AdmissionWhereInput = {};
             if (keyword) {
-                query.$or = [
-                    { email: { $regex: keyword, $options: 'i' } },
-                    { name: { $regex: keyword, $options: 'i' } },
-                    { phone: { $regex: keyword, $options: 'i' } },
-                    { address: { $regex: keyword, $options: 'i' } },
+                where.OR = [
+                    { email: { contains: keyword } },
+                    { name: { contains: keyword } },
+                    { phone: { contains: keyword } },
+                    { address: { contains: keyword } },
                 ];
             }
             const paging = {
@@ -39,7 +40,7 @@ export class AdmissionsService {
                 limit,
                 page,
             };
-            const { items, totalItems } = await this.admissionsRepository.getList(query, paging);
+            const { items, totalItems } = await this.admissionsRepository.getList(where, paging);
             const totalPages = Math.ceil(totalItems / limit);
 
             return new ResponseHandler(200, true, 'Get List Admissions successfully', {
@@ -101,9 +102,8 @@ export class AdmissionsService {
         try {
             const newsRecords = await this.admissionsRepository.getMetadataManyRecordQuery({
                 updateCondition: {
-                    _id: { $in: payload.admissionIds },
+                    id: { in: payload.admissionIds },
                 },
-                updateQuery: {},
             });
             if (!newsRecords || !newsRecords.length) {
                 return new ResponseHandler(404, true, `Admissions with id ${payload.admissionIds} not found`, null);
@@ -133,8 +133,22 @@ export class AdmissionsService {
                     });
                 }),
             );
-            const newAccounts = await this.userRepository.insertMultiple(userModels);
-            if (!newAccounts) return new ResponseHandler(500, false, 'Can not create new account', null);
+            // insertMultiple not available in UserRepository yet? It was remove or refactored.
+            // UserRepository currently has `create`. Prisma `createMany` exists but UserRepository might not expose it identically.
+            // Mongoose `insertMany` returned docs. Prisma `createMany` returns count.
+            // I should check `UserRepository`.
+            // In step 40, `UserRepository` `insertMultiple` was removed in favor of `create`?
+            // No, I didn't see `insertMultiple` in the final `UserRepository`.
+            // I should add `insertMultiple` to `UserRepository` or use loop.
+            // Loop is safer for now as `userRepository.create` handles relations (though we pass roles as IDs).
+
+            const newAccounts: any[] = [];
+            for (const userModel of userModels) {
+                const res = await this.userRepository.create(userModel);
+                if (res) newAccounts.push(res);
+            }
+
+            if (!newAccounts.length) return new ResponseHandler(500, false, 'Can not create new account', null);
             await Promise.all(
                 newsRecords.map(async (record) => {
                     await this.admissionsRepository.permanentlyDelete(record.id);

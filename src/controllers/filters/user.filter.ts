@@ -122,10 +122,7 @@ export class UpdateUserFilterModel implements Partial<IPayloadUpdateUser> {
 }
 
 // region register course user
-export type IPayloadUserRegisterCourse = Omit<
-    ICourseRegisteringEntity,
-    'user' | 'id' | 'course' | 'createdAt' | 'updatedAt'
-> & {
+export type IPayloadUserRegisterCourse = Omit<ICourseRegisteringEntity, 'user' | 'id' | 'course' | 'createdAt' | 'updatedAt'> & {
     courseIds: string[];
     userId: string;
 };

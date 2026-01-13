@@ -51,10 +51,7 @@ export class GetPagingCourseRequirementFilterModel implements Partial<IPayloadGe
 }
 
 // region create payload
-export type IPayloadCreateCourseRequirement = Omit<
-    ICourseRequirementEntity,
-    'id' | 'course' | 'createdAt' | 'updatedAt'
-> & {
+export type IPayloadCreateCourseRequirement = Omit<ICourseRequirementEntity, 'id' | 'course' | 'createdAt' | 'updatedAt'> & {
     courseId: string;
 };
 
