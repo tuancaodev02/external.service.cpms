@@ -106,15 +106,8 @@ export class JWTHelper {
     public verifyToken(token: string, secretKey?: string): string | jwt.JwtPayload {
         const key = secretKey || environment.AUTH_PRIVATE_KEY || '';
         this.validateKey(key, 'Verification key');
-
         const verifyKey = this.getVerificationKey(key);
         const algorithm = this.getAlgorithm(verifyKey);
-
-        try {
-            return jwt.verify(token, verifyKey, { algorithms: [algorithm] });
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            throw new Error(`JWT verification failed: ${errorMessage}`);
-        }
+        return jwt.verify(token, verifyKey, { algorithms: [algorithm] });
     }
 }
