@@ -2,7 +2,7 @@
 node_modules
 bun.lockb
 
-# Environment
+# Environment - Vercel will use its own env vars
 .env
 .env.*
 !.env.example
@@ -27,9 +27,14 @@ scripts
 # Keys
 keys
 
-# Prisma
+# Prisma migrations (schema will be used)
 prisma/migrations
 
-# Build artifacts
+# Build artifacts (not needed for src deployment)
 *.log
 .DS_Store
+dist
+build
+
+# Vercel
+.vercel

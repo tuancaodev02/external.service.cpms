@@ -1,19 +1,20 @@
 {
     "version": 2,
-    "installCommand": "bun install",
-    "buildCommand": "bun run build && bun run prisma:generate",
-    "rewrites": [
+    "builds": [
         {
-            "source": "/(.*)",
-            "destination": "/api/index.js"
+            "src": "src/index.ts",
+            "use": "@vercel/node",
+            "config": {
+                "includeFiles": ["prisma/schema.prisma"]
+            }
         }
     ],
-    "functions": {
-        "api/index.js": {
-            "maxDuration": 30,
-            "memory": 1024
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "src/index.ts"
         }
-    },
+    ],
     "env": {
         "NODE_ENV": "production"
     }
