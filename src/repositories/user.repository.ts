@@ -1,4 +1,3 @@
-import { EnumUserRole } from '@/core/constants/common.constant';
 import type { QueryPaging } from '@/core/interfaces/common.interface';
 import type { IUserEntity } from '@/database/entities/user.entity';
 import { prisma } from '@/database/prisma.client';
@@ -11,18 +10,18 @@ export class UserRepository extends BaseRepository {
     }
 
     public async checkUserExists(id: string): Promise<{ id: string } | null> {
-        const user = await prisma.user.findUnique({
+        const user = await prisma.users.findUnique({
             where: { id },
             select: { id: true },
         });
         return user;
     }
 
-    public async getList(where: Prisma.UserWhereInput, queryPaging: QueryPaging): Promise<{ items: IUserEntity[]; totalItems: number }> {
+    public async getList(where: Prisma.UsersWhereInput, queryPaging: QueryPaging): Promise<{ items: IUserEntity[]; totalItems: number }> {
         const { skip, limit } = queryPaging;
 
         const [items, totalItems] = await Promise.all([
-            prisma.user.findMany({
+            prisma.users.findMany({
                 where,
                 skip,
                 take: limit,
@@ -40,10 +39,10 @@ export class UserRepository extends BaseRepository {
                 },
                 orderBy: { createdAt: 'desc' }, // default sort
             }),
-            prisma.user.count({ where }),
+            prisma.users.count({ where }),
         ]);
 
-        const roles = await prisma.role.findMany();
+        const roles = await prisma.roles.findMany();
 
         // Transform the data to match expected output structure
         const transformedItems = items.map((user) => ({
@@ -84,7 +83,7 @@ export class UserRepository extends BaseRepository {
     }
 
     public async getById(id: string): Promise<IUserEntity | null> {
-        const user = await prisma.user.findUnique({
+        const user = await prisma.users.findUnique({
             where: { id },
             include: {
                 userCourses: {
@@ -102,7 +101,7 @@ export class UserRepository extends BaseRepository {
 
         if (!user) return null;
 
-        const roles = await prisma.role.findMany();
+        const roles = await prisma.roles.findMany();
 
         const courses = user.userCourses.map((uc) => ({
             id: uc.course.id,
@@ -144,13 +143,13 @@ export class UserRepository extends BaseRepository {
 
         if (courseIds.length > 0) {
             // Find courses NOT in courseIds
-            coursesRemaining = await prisma.course.findMany({
+            coursesRemaining = await prisma.courses.findMany({
                 where: {
                     id: { notIn: courseIds },
                 },
             });
         } else {
-            coursesRemaining = await prisma.course.findMany();
+            coursesRemaining = await prisma.courses.findMany();
         }
 
         // Return mixed object as originally done (casting to any/IUserEntity)
@@ -164,7 +163,7 @@ export class UserRepository extends BaseRepository {
     }
 
     public async getByIdNoPopulate(id: string): Promise<IUserEntity | null> {
-        const user = await prisma.user.findUnique({ where: { id } });
+        const user = await prisma.users.findUnique({ where: { id } });
         return user as unknown as IUserEntity;
     }
 
@@ -173,14 +172,14 @@ export class UserRepository extends BaseRepository {
     }
 
     public async getByEmail(email: string): Promise<IUserEntity | null> {
-        return (await prisma.user.findUnique({ where: { email } })) as unknown as IUserEntity;
+        return (await prisma.users.findUnique({ where: { email } })) as unknown as IUserEntity;
     }
 
     public async getRoleRecord(role: number): Promise<IUserEntity | null> {
-        const roleRecord = await prisma.role.findFirst({ where: { role: role } });
+        const roleRecord = await prisma.roles.findFirst({ where: { role: role } });
         if (!roleRecord) return null;
 
-        const user = await prisma.user.findFirst({
+        const user = await prisma.users.findFirst({
             where: {
                 userRoles: {
                     some: {
@@ -192,12 +191,8 @@ export class UserRepository extends BaseRepository {
         return user as unknown as IUserEntity;
     }
 
-    public async getUserRoleRecord(): Promise<IUserEntity | null> {
-        return this.getRoleRecord(EnumUserRole.USER);
-    }
-
     public async getCourseMultipleId(requirementIds: string[]) {
-        return await prisma.user.findMany({ where: { id: { in: requirementIds } } });
+        return await prisma.users.findMany({ where: { id: { in: requirementIds } } });
     }
 
     public async create(payload: IUserEntity): Promise<IUserEntity | null> {
@@ -212,7 +207,7 @@ export class UserRepository extends BaseRepository {
         // Assuming `roles` contains Role IDs? Or Names?
         // Entity says `roles: string[]`.
 
-        const createData: Prisma.UserCreateInput = {
+        const createData: Prisma.UsersCreateInput = {
             id,
             name: payload.name,
             birthday: payload.birthday,
@@ -232,7 +227,7 @@ export class UserRepository extends BaseRepository {
                     : undefined,
         };
 
-        const user = await prisma.user.create({
+        const user = await prisma.users.create({
             data: createData,
         });
         return user as unknown as IUserEntity;
@@ -245,7 +240,7 @@ export class UserRepository extends BaseRepository {
         delete updateData.courses; // these are relations
         delete updateData.coursesRegistering;
 
-        const user = await prisma.user.update({
+        const user = await prisma.users.update({
             where: { id },
             data: updateData,
         });
@@ -254,8 +249,8 @@ export class UserRepository extends BaseRepository {
 
     // Changing signature to accept Prisma inputs
     public async updateRecord(options: {
-        updateCondition: Prisma.UserWhereUniqueInput;
-        updateQuery: Prisma.UserUpdateInput;
+        updateCondition: Prisma.UsersWhereUniqueInput;
+        updateQuery: Prisma.UsersUpdateInput;
     }): Promise<IUserEntity | null> {
         // Handling special mongo atomic operators if passed (unlikely if I refactor service)
         // Check keys. If they start with $, we might have issues if caller not updated.
@@ -265,7 +260,7 @@ export class UserRepository extends BaseRepository {
         // But `UserService` has `$addToSet` etc.
         // I MUST REFACTOR SERVICE TO PASS PRISMA DATA.
 
-        return (await prisma.user.update({
+        return (await prisma.users.update({
             where: options.updateCondition,
             data: options.updateQuery,
         })) as unknown as IUserEntity;
@@ -289,22 +284,22 @@ export class UserRepository extends BaseRepository {
             refreshToken: p.refreshToken,
         }));
 
-        await prisma.user.createMany({
+        await prisma.users.createMany({
             data,
         });
 
         return payload; // Approximation
     }
 
-    public async updateManyRecord(options: { updateCondition: Prisma.UserWhereInput; updateQuery: Prisma.UserUpdateInput }) {
-        return await prisma.user.updateMany({
+    public async updateManyRecord(options: { updateCondition: Prisma.UsersWhereInput; updateQuery: Prisma.UsersUpdateInput }) {
+        return await prisma.users.updateMany({
             where: options.updateCondition,
             data: options.updateQuery,
         });
     }
 
     public async permanentlyDelete(id: string): Promise<IUserEntity | null> {
-        return (await prisma.user.delete({
+        return (await prisma.users.delete({
             where: { id },
         })) as unknown as IUserEntity;
     }

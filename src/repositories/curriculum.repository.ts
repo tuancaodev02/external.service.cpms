@@ -10,12 +10,12 @@ export class CurriculumRepository extends BaseRepository {
     }
 
     public async getList(
-        where: Prisma.CurriculumWhereInput,
+        where: Prisma.CurriculaWhereInput,
         queryPaging: QueryPaging,
     ): Promise<{ items: ICurriculumEntity[]; totalItems: number }> {
         const { skip, limit } = queryPaging;
         const [items, totalItems] = await Promise.all([
-            prisma.curriculum.findMany({
+            prisma.curricula.findMany({
                 where,
                 skip,
                 take: limit,
@@ -23,14 +23,14 @@ export class CurriculumRepository extends BaseRepository {
                     faculties: true,
                 },
             }),
-            prisma.curriculum.count({ where }),
+            prisma.curricula.count({ where }),
         ]);
 
         return { items: items as unknown as ICurriculumEntity[], totalItems };
     }
 
     public async getById(id: string): Promise<ICurriculumEntity | null> {
-        return (await prisma.curriculum.findUnique({
+        return (await prisma.curricula.findUnique({
             where: { id },
             include: {
                 faculties: true,
@@ -39,25 +39,17 @@ export class CurriculumRepository extends BaseRepository {
     }
 
     public async getByIdNoPopulate(id: string): Promise<ICurriculumEntity | null> {
-        return (await prisma.curriculum.findUnique({ where: { id } })) as unknown as ICurriculumEntity;
+        return (await prisma.curricula.findUnique({ where: { id } })) as unknown as ICurriculumEntity;
     }
 
     public async getByCode(code: string): Promise<ICurriculumEntity | null> {
-        return (await prisma.curriculum.findUnique({ where: { code } })) as unknown as ICurriculumEntity;
-    }
-
-    public async getRoleRecord(role: number): Promise<ICurriculumEntity | null> {
-        return null;
-    }
-
-    public async getUserRoleRecord(): Promise<ICurriculumEntity | null> {
-        return null;
+        return (await prisma.curricula.findUnique({ where: { code } })) as unknown as ICurriculumEntity;
     }
 
     public async create(payload: ICurriculumEntity): Promise<ICurriculumEntity | null> {
         const { id, faculties, ...rest } = payload as any; // Cast as any to avoid strict check if ICurriculumEntity lacks faculties input
 
-        const data: Prisma.CurriculumCreateInput = {
+        const data: Prisma.CurriculaCreateInput = {
             id,
             title: rest.title,
             description: rest.description,
@@ -65,13 +57,13 @@ export class CurriculumRepository extends BaseRepository {
             durationStart: rest.durationStart,
             durationEnd: rest.durationEnd,
         };
-        const res = await prisma.curriculum.create({ data });
+        const res = await prisma.curricula.create({ data });
         return res as unknown as ICurriculumEntity;
     }
 
     public async update(payload: ICurriculumEntity): Promise<ICurriculumEntity | null> {
         const { id, ...data } = payload;
-        const res = await prisma.curriculum.update({
+        const res = await prisma.curricula.update({
             where: { id },
             data: {
                 title: data.title,
@@ -85,26 +77,26 @@ export class CurriculumRepository extends BaseRepository {
     }
 
     public async updateManyRecord(options: {
-        updateCondition: Prisma.CurriculumWhereInput;
-        updateQuery: Prisma.CurriculumUpdateManyMutationInput;
+        updateCondition: Prisma.CurriculaWhereInput;
+        updateQuery: Prisma.CurriculaUpdateManyMutationInput;
     }): Promise<Prisma.BatchPayload> {
-        return await prisma.curriculum.updateMany({
+        return await prisma.curricula.updateMany({
             where: options.updateCondition,
             data: options.updateQuery,
         });
     }
 
     public async updateRecord(options: {
-        updateCondition: Prisma.CurriculumWhereUniqueInput;
-        updateQuery: Prisma.CurriculumUpdateInput;
+        updateCondition: Prisma.CurriculaWhereUniqueInput;
+        updateQuery: Prisma.CurriculaUpdateInput;
     }): Promise<ICurriculumEntity | null> {
-        return (await prisma.curriculum.update({
+        return (await prisma.curricula.update({
             where: options.updateCondition,
             data: options.updateQuery,
         })) as unknown as ICurriculumEntity;
     }
 
     public async permanentlyDelete(id: string): Promise<ICurriculumEntity | null> {
-        return (await prisma.curriculum.delete({ where: { id } })) as unknown as ICurriculumEntity;
+        return (await prisma.curricula.delete({ where: { id } })) as unknown as ICurriculumEntity;
     }
 }

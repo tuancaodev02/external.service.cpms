@@ -25,7 +25,7 @@ export class UserService {
     public async getList(payload: IPayloadGetListUser): Promise<IResponseServer> {
         try {
             const { page = 1, limit = 10, keyword } = payload;
-            const where: Prisma.UserWhereInput = {};
+            const where: Prisma.UsersWhereInput = {};
 
             if (keyword) {
                 where.OR = [

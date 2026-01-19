@@ -26,7 +26,7 @@ export class AdmissionsService {
         try {
             const { page = 1, limit = 10, keyword } = payload;
             const skip = (page - 1) * limit;
-            const where: Prisma.AdmissionWhereInput = {};
+            const where: Prisma.AdmissionsWhereInput = {};
             if (keyword) {
                 where.OR = [
                     { email: { contains: keyword } },

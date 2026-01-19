@@ -35,14 +35,6 @@ export class NewsRepository extends BaseRepository {
         return (await prisma.news.findMany({ where: options.updateCondition })) as unknown as INewsEntity[];
     }
 
-    public async getRoleRecord(role: number): Promise<INewsEntity | null> {
-        return null;
-    }
-
-    public async getUserRoleRecord(): Promise<INewsEntity | null> {
-        return null;
-    }
-
     public async getCourseMultipleId(courses: string[]) {
         return await prisma.news.findMany({ where: { id: { in: courses } } });
     }

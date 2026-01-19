@@ -12,8 +12,8 @@ datasource db {
   url      = env("DB_URL")
 }
 
-// User Model
-model User {
+// Users Model
+model Users {
   id           String   @id @default(uuid())
   name         String
   birthday     String
@@ -26,15 +26,15 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  userRoles           UserRole[]
-  userCourses         UserCourse[]
-  courseRegistrations CourseRegister[]
+  userRoles           UserRoles[]
+  userCourses         UserCourses[]
+  courseRegistrations CourseRegisters[]
 
   @@map("users")
 }
 
-// Role Model
-model Role {
+// Roles Model
+model Roles {
   id          String   @id @default(uuid())
   title       String
   role        Int      @unique
@@ -43,13 +43,13 @@ model Role {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  userRoles UserRole[]
+  userRoles UserRoles[]
 
   @@map("roles")
 }
 
-// UserRole (Many-to-Many relationship)
-model UserRole {
+// UserRoles (Many-to-Many relationship)
+model UserRoles {
   id        String   @id @default(uuid())
   userId    String
   roleId    String
@@ -57,15 +57,15 @@ model UserRole {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Roles @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
   @@map("user_roles")
 }
 
-// School Model
-model School {
+// Schools Model
+model Schools {
   id          String   @id @default(uuid())
   title       String
   code        String   @unique
@@ -80,8 +80,8 @@ model School {
   @@map("schools")
 }
 
-// Curriculum Model
-model Curriculum {
+// Curricula Model
+model Curricula {
   id            String   @id @default(uuid())
   title         String
   description   String
@@ -92,13 +92,13 @@ model Curriculum {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  faculties Faculty[]
+  faculties Faculties[]
 
   @@map("curricula")
 }
 
-// Faculty Model
-model Faculty {
+// Faculties Model
+model Faculties {
   id            String   @id @default(uuid())
   title         String
   description   String
@@ -111,14 +111,14 @@ model Faculty {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  curriculum Curriculum @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
-  courses    Course[]
+  curriculum Curricula @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  courses    Courses[]
 
   @@map("faculties")
 }
 
-// Course Model
-model Course {
+// Courses Model
+model Courses {
   id            String   @id @default(uuid())
   title         String
   code          String   @unique
@@ -131,16 +131,16 @@ model Course {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  faculty       Faculty             @relation(fields: [facultyId], references: [id], onDelete: Cascade)
-  requirements  CourseRequirement[]
-  userCourses   UserCourse[]
-  registrations CourseRegister[]
+  faculty       Faculties             @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  requirements  CourseRequirements[]
+  userCourses   UserCourses[]
+  registrations CourseRegisters[]
 
   @@map("courses")
 }
 
-// CourseRequirement Model
-model CourseRequirement {
+// CourseRequirements Model
+model CourseRequirements {
   id          String   @id @default(uuid())
   title       String
   code        String
@@ -150,13 +150,13 @@ model CourseRequirement {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course Courses @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("course_requirements")
 }
 
-// UserCourse Model
-model UserCourse {
+// UserCourses Model
+model UserCourses {
   id        String   @id @default(uuid())
   userId    String
   courseId  String
@@ -165,15 +165,15 @@ model UserCourse {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Courses @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("user_courses")
 }
 
-// CourseRegister Model
-model CourseRegister {
+// CourseRegisters Model
+model CourseRegisters {
   id        String   @id @default(uuid())
   userId    String
   courseId  String
@@ -181,8 +181,8 @@ model CourseRegister {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Courses @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("course_registers")
@@ -201,7 +201,7 @@ model News {
 }
 
 // Admissions Model
-model Admission {
+model Admissions {
   id        String   @id @default(uuid())
   name      String
   birthday  String
@@ -215,8 +215,8 @@ model Admission {
   @@map("admissions")
 }
 
-// Contact Model
-model Contact {
+// Contacts Model
+model Contacts {
   id         String   @id @default(uuid())
   department String
   email      String

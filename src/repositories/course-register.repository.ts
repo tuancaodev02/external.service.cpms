@@ -9,47 +9,37 @@ export class CourseRegisterRepository extends BaseRepository {
     }
 
     public async getList(): Promise<ICourseRegisteringEntity[]> {
-        return (await prisma.courseRegister.findMany()) as unknown as ICourseRegisteringEntity[];
+        return (await prisma.courseRegisters.findMany()) as unknown as ICourseRegisteringEntity[];
     }
 
     public async getById(id: string): Promise<ICourseRegisteringEntity | null> {
-        return (await prisma.courseRegister.findUnique({ where: { id } })) as unknown as ICourseRegisteringEntity;
+        return (await prisma.courseRegisters.findUnique({ where: { id } })) as unknown as ICourseRegisteringEntity;
     }
 
     public async getByUserId(userId: string): Promise<ICourseRegisteringEntity[] | null> {
-        return (await prisma.courseRegister.findMany({ where: { userId } })) as unknown as ICourseRegisteringEntity[];
+        return (await prisma.courseRegisters.findMany({ where: { userId } })) as unknown as ICourseRegisteringEntity[];
     }
 
     public async getMetadataQuery(options: {
-        updateCondition: Prisma.CourseRegisterWhereInput;
+        updateCondition: Prisma.CourseRegistersWhereInput;
         updateQuery?: any;
     }): Promise<ICourseRegisteringEntity | null> {
-        return (await prisma.courseRegister.findFirst({
+        return (await prisma.courseRegisters.findFirst({
             where: options.updateCondition,
         })) as unknown as ICourseRegisteringEntity;
     }
 
     public async getMetadataManyRecordQuery(options: {
-        updateCondition: Prisma.CourseRegisterWhereInput;
+        updateCondition: Prisma.CourseRegistersWhereInput;
         updateQuery?: any;
     }): Promise<ICourseRegisteringEntity[]> {
-        return (await prisma.courseRegister.findMany({
+        return (await prisma.courseRegisters.findMany({
             where: options.updateCondition,
         })) as unknown as ICourseRegisteringEntity[];
     }
 
-    public async getRoleRecord(role: number): Promise<ICourseRegisteringEntity | null> {
-        // Not relevant for CourseRegister? Or maybe finding by role?
-        // Likely copied boilerplate or unused.
-        return null;
-    }
-
-    public async getUserRoleRecord(): Promise<ICourseRegisteringEntity | null> {
-        return null;
-    }
-
     public async getCourseMultipleId(courses: string[]) {
-        return await prisma.courseRegister.findMany({
+        return await prisma.courseRegisters.findMany({
             where: { id: { in: courses } },
         });
     }
@@ -58,12 +48,12 @@ export class CourseRegisterRepository extends BaseRepository {
         // Payload has user (userId) and course (courseId).
         // Entity interface says `user: string`, `course: string` (IDs).
         // Prisma model has `userId`, `courseId`.
-        const data: Prisma.CourseRegisterCreateInput = {
+        const data: Prisma.CourseRegistersCreateInput = {
             id: payload.id,
             user: { connect: { id: payload.user } },
             course: { connect: { id: payload.course } },
         };
-        const res = await prisma.courseRegister.create({ data });
+        const res = await prisma.courseRegisters.create({ data });
         return res as unknown as ICourseRegisteringEntity;
     }
 
@@ -76,14 +66,14 @@ export class CourseRegisterRepository extends BaseRepository {
             courseId: p.course,
         }));
 
-        await prisma.courseRegister.createMany({ data });
+        await prisma.courseRegisters.createMany({ data });
         return payload;
     }
 
     public async update(payload: ICourseRegisteringEntity): Promise<ICourseRegisteringEntity | null> {
         const { id, user, course, ...rest } = payload;
         // user and course are IDs.
-        const res = await prisma.courseRegister.update({
+        const res = await prisma.courseRegisters.update({
             where: { id },
             data: {
                 ...rest,
@@ -95,21 +85,21 @@ export class CourseRegisterRepository extends BaseRepository {
     }
 
     public async updateRecord(options: {
-        updateCondition: Prisma.CourseRegisterWhereUniqueInput;
-        updateQuery: Prisma.CourseRegisterUpdateInput;
+        updateCondition: Prisma.CourseRegistersWhereUniqueInput;
+        updateQuery: Prisma.CourseRegistersUpdateInput;
     }): Promise<ICourseRegisteringEntity | null> {
-        return (await prisma.courseRegister.update({
+        return (await prisma.courseRegisters.update({
             where: options.updateCondition,
             data: options.updateQuery,
         })) as unknown as ICourseRegisteringEntity;
     }
 
     public async permanentlyDelete(id: string): Promise<ICourseRegisteringEntity | null> {
-        return (await prisma.courseRegister.delete({ where: { id } })) as unknown as ICourseRegisteringEntity;
+        return (await prisma.courseRegisters.delete({ where: { id } })) as unknown as ICourseRegisteringEntity;
     }
 
     public async permanentlyDeleteMultiple(ids: string[]): Promise<Prisma.BatchPayload | null> {
-        return await prisma.courseRegister.deleteMany({
+        return await prisma.courseRegisters.deleteMany({
             where: { id: { in: ids } },
         });
     }

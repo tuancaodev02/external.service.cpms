@@ -10,12 +10,12 @@ export class FacultyRepository extends BaseRepository {
     }
 
     public async getList(
-        where: Prisma.FacultyWhereInput,
+        where: Prisma.FacultiesWhereInput,
         queryPaging: QueryPaging,
     ): Promise<{ items: IFacultyEntity[]; totalItems: number }> {
         const { skip, limit } = queryPaging;
         const [items, totalItems] = await Promise.all([
-            prisma.faculty.findMany({
+            prisma.faculties.findMany({
                 where,
                 skip,
                 take: limit,
@@ -23,14 +23,14 @@ export class FacultyRepository extends BaseRepository {
                     courses: true, // Include courses to match populating behavior
                 },
             }),
-            prisma.faculty.count({ where }),
+            prisma.faculties.count({ where }),
         ]);
 
         return { items: items as unknown as IFacultyEntity[], totalItems };
     }
 
     public async getById(id: string): Promise<IFacultyEntity | null> {
-        return (await prisma.faculty.findUnique({
+        return (await prisma.faculties.findUnique({
             where: { id },
             include: {
                 courses: true,
@@ -39,23 +39,15 @@ export class FacultyRepository extends BaseRepository {
     }
 
     public async getByIdNoPopulate(id: string): Promise<IFacultyEntity | null> {
-        return (await prisma.faculty.findUnique({ where: { id } })) as unknown as IFacultyEntity;
+        return (await prisma.faculties.findUnique({ where: { id } })) as unknown as IFacultyEntity;
     }
 
     public async getByCode(code: string): Promise<IFacultyEntity | null> {
-        return (await prisma.faculty.findUnique({ where: { code } })) as unknown as IFacultyEntity;
-    }
-
-    public async getRoleRecord(role: number): Promise<IFacultyEntity | null> {
-        return null;
-    }
-
-    public async getUserRoleRecord(): Promise<IFacultyEntity | null> {
-        return null;
+        return (await prisma.faculties.findUnique({ where: { code } })) as unknown as IFacultyEntity;
     }
 
     public async getFacultiesMultipleId(facultyIds: string[]) {
-        return await prisma.faculty.findMany({ where: { id: { in: facultyIds } } });
+        return await prisma.faculties.findMany({ where: { id: { in: facultyIds } } });
     }
 
     public async create(payload: IFacultyEntity): Promise<IFacultyEntity | null> {
@@ -64,7 +56,7 @@ export class FacultyRepository extends BaseRepository {
         // Prisma schema: Faculty has `courses Course[]`.
         // If payload has courses as string IDs, we connect them.
 
-        const data: Prisma.FacultyCreateInput = {
+        const data: Prisma.FacultiesCreateInput = {
             id,
             title: rest.title,
             description: rest.description,
@@ -77,7 +69,7 @@ export class FacultyRepository extends BaseRepository {
             curriculum: { connect: { id: rest.curriculum } },
             // courses connection?
         };
-        const res = await prisma.faculty.create({ data });
+        const res = await prisma.faculties.create({ data });
         return res as unknown as IFacultyEntity;
     }
 
@@ -97,7 +89,7 @@ export class FacultyRepository extends BaseRepository {
             updateData.curriculum = { connect: { id: data.curriculum } };
         }
 
-        const res = await prisma.faculty.update({
+        const res = await prisma.faculties.update({
             where: { id },
             data: updateData,
         });
@@ -105,26 +97,26 @@ export class FacultyRepository extends BaseRepository {
     }
 
     public async updateRecord(options: {
-        updateCondition: Prisma.FacultyWhereUniqueInput;
-        updateQuery: Prisma.FacultyUpdateInput;
+        updateCondition: Prisma.FacultiesWhereUniqueInput;
+        updateQuery: Prisma.FacultiesUpdateInput;
     }): Promise<IFacultyEntity | null> {
-        return (await prisma.faculty.update({
+        return (await prisma.faculties.update({
             where: options.updateCondition,
             data: options.updateQuery,
         })) as unknown as IFacultyEntity;
     }
 
     public async updateManyRecord(options: {
-        updateCondition: Prisma.FacultyWhereInput;
-        updateQuery: Prisma.FacultyUpdateManyMutationInput;
+        updateCondition: Prisma.FacultiesWhereInput;
+        updateQuery: Prisma.FacultiesUpdateManyMutationInput;
     }): Promise<Prisma.BatchPayload> {
-        return await prisma.faculty.updateMany({
+        return await prisma.faculties.updateMany({
             where: options.updateCondition,
             data: options.updateQuery,
         });
     }
 
     public async permanentlyDelete(id: string): Promise<IFacultyEntity | null> {
-        return (await prisma.faculty.delete({ where: { id } })) as unknown as IFacultyEntity;
+        return (await prisma.faculties.delete({ where: { id } })) as unknown as IFacultyEntity;
     }
 }

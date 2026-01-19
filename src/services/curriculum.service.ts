@@ -24,7 +24,7 @@ export class CurriculumService {
         try {
             const { page = 1, limit = 10, keyword, durationStart, durationEnd } = payload;
             const skip = (page - 1) * limit;
-            const where: Prisma.CurriculumWhereInput = {};
+            const where: Prisma.CurriculaWhereInput = {};
             if (keyword) {
                 where.OR = [{ title: { contains: keyword } }, { code: { contains: keyword } }, { description: { contains: keyword } }];
             }

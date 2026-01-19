@@ -6,6 +6,7 @@ import 'reflect-metadata';
 import '@/core/configs/moment-timezone.config';
 import { APP_PATH } from '@/core/constants/common.constant';
 import rootRouter from '@/routes/index.route';
+import ExceptionController from './controllers/exception.controller';
 import Database from './database/connect.database';
 
 const app = express();
@@ -36,6 +37,26 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(APP_PATH, rootRouter);
+app.get('/health-check', (req, res) => {
+    res.status(200).json({
+        code: 200,
+        message: 'OK',
+        data: {
+            service: 'external.service.cpms',
+            version: '1.0.0',
+            status: 'healthy',
+        },
+    });
+});
+
+app.use(
+    '*',
+    (req, res, next) => {
+        console.log(`Request received: ${req.method} - ${req.url}`);
+        next();
+    },
+    new ExceptionController().endpointException,
+);
 
 // Initialize database connection
 let isConnected = false;
@@ -59,11 +80,4 @@ if (process.env.NODE_ENV !== 'production') {
         });
 }
 
-// Export for Vercel serverless
-export default async (req: any, res: any) => {
-    await initDatabase();
-    return app(req, res);
-};
-
-// Also export the app for other uses
-export { app };
+export default app;

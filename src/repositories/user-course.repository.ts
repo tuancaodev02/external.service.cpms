@@ -9,41 +9,33 @@ export class UserCourseRepository extends BaseRepository {
     }
 
     public async getList(): Promise<IUserCourseEntity[]> {
-        return (await prisma.userCourse.findMany()) as unknown as IUserCourseEntity[];
+        return (await prisma.userCourses.findMany()) as unknown as IUserCourseEntity[];
     }
 
     public async getById(id: string): Promise<IUserCourseEntity | null> {
-        return (await prisma.userCourse.findUnique({ where: { id } })) as unknown as IUserCourseEntity;
+        return (await prisma.userCourses.findUnique({ where: { id } })) as unknown as IUserCourseEntity;
     }
 
-    public async getMetadataQuery(options: { updateCondition: Prisma.UserCourseWhereInput }): Promise<IUserCourseEntity | null> {
-        return (await prisma.userCourse.findFirst({ where: options.updateCondition })) as unknown as IUserCourseEntity;
+    public async getMetadataQuery(options: { updateCondition: Prisma.UserCoursesWhereInput }): Promise<IUserCourseEntity | null> {
+        return (await prisma.userCourses.findFirst({ where: options.updateCondition })) as unknown as IUserCourseEntity;
     }
 
-    public async getMetadataManyRecordQuery(options: { updateCondition: Prisma.UserCourseWhereInput }): Promise<IUserCourseEntity[]> {
-        return (await prisma.userCourse.findMany({ where: options.updateCondition })) as unknown as IUserCourseEntity[];
-    }
-
-    public async getRoleRecord(role: number): Promise<IUserCourseEntity | null> {
-        return null;
-    }
-
-    public async getUserRoleRecord(): Promise<IUserCourseEntity | null> {
-        return null;
+    public async getMetadataManyRecordQuery(options: { updateCondition: Prisma.UserCoursesWhereInput }): Promise<IUserCourseEntity[]> {
+        return (await prisma.userCourses.findMany({ where: options.updateCondition })) as unknown as IUserCourseEntity[];
     }
 
     public async getCourseMultipleId(courses: string[]) {
-        return await prisma.userCourse.findMany({ where: { id: { in: courses } } });
+        return await prisma.userCourses.findMany({ where: { id: { in: courses } } });
     }
 
     public async create(payload: IUserCourseEntity): Promise<IUserCourseEntity | null> {
-        const data: Prisma.UserCourseCreateInput = {
+        const data: Prisma.UserCoursesCreateInput = {
             id: payload.id,
             user: { connect: { id: payload.user } },
             course: { connect: { id: payload.course } },
             status: payload.status,
         };
-        const res = await prisma.userCourse.create({ data });
+        const res = await prisma.userCourses.create({ data });
         return res as unknown as IUserCourseEntity;
     }
 
@@ -54,13 +46,13 @@ export class UserCourseRepository extends BaseRepository {
             courseId: p.course,
             status: p.status,
         }));
-        await prisma.userCourse.createMany({ data });
+        await prisma.userCourses.createMany({ data });
         return payload;
     }
 
     public async update(payload: IUserCourseEntity): Promise<IUserCourseEntity | null> {
         const { id, ...data } = payload;
-        const res = await prisma.userCourse.update({
+        const res = await prisma.userCourses.update({
             where: { id },
             data: {
                 status: data.status,
@@ -70,30 +62,30 @@ export class UserCourseRepository extends BaseRepository {
     }
 
     public async updateRecord(options: {
-        updateCondition: Prisma.UserCourseWhereUniqueInput;
-        updateQuery: Prisma.UserCourseUpdateInput;
+        updateCondition: Prisma.UserCoursesWhereUniqueInput;
+        updateQuery: Prisma.UserCoursesUpdateInput;
     }): Promise<IUserCourseEntity | null> {
-        return (await prisma.userCourse.update({
+        return (await prisma.userCourses.update({
             where: options.updateCondition,
             data: options.updateQuery,
         })) as unknown as IUserCourseEntity;
     }
 
     public async updateManyRecord(options: {
-        updateCondition: Prisma.UserCourseWhereInput;
-        updateQuery: Prisma.UserCourseUpdateManyMutationInput;
+        updateCondition: Prisma.UserCoursesWhereInput;
+        updateQuery: Prisma.UserCoursesUpdateManyMutationInput;
     }): Promise<Prisma.BatchPayload> {
-        return await prisma.userCourse.updateMany({
+        return await prisma.userCourses.updateMany({
             where: options.updateCondition,
             data: options.updateQuery,
         });
     }
 
     public async permanentlyDelete(id: string): Promise<IUserCourseEntity | null> {
-        return (await prisma.userCourse.delete({ where: { id } })) as unknown as IUserCourseEntity;
+        return (await prisma.userCourses.delete({ where: { id } })) as unknown as IUserCourseEntity;
     }
 
     public async permanentlyDeleteMultiple(ids: string[]): Promise<Prisma.BatchPayload | null> {
-        return await prisma.userCourse.deleteMany({ where: { id: { in: ids } } });
+        return await prisma.userCourses.deleteMany({ where: { id: { in: ids } } });
     }
 }

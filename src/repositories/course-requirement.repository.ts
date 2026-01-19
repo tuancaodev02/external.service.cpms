@@ -10,12 +10,12 @@ export class CourseRequirementRepository extends BaseRepository {
     }
 
     public async getList(
-        where: Prisma.CourseRequirementWhereInput,
+        where: Prisma.CourseRequirementsWhereInput,
         queryPaging: QueryPaging,
     ): Promise<{ items: ICourseRequirementEntity[]; totalItems: number }> {
         const { skip, limit } = queryPaging;
         const [items, totalItems] = await Promise.all([
-            prisma.courseRequirement.findMany({
+            prisma.courseRequirements.findMany({
                 where,
                 skip,
                 take: limit,
@@ -23,14 +23,14 @@ export class CourseRequirementRepository extends BaseRepository {
                     course: true, // Populate course
                 },
             }),
-            prisma.courseRequirement.count({ where }),
+            prisma.courseRequirements.count({ where }),
         ]);
 
         return { items: items as unknown as ICourseRequirementEntity[], totalItems };
     }
 
     public async getById(id: string): Promise<ICourseRequirementEntity | null> {
-        return (await prisma.courseRequirement.findUnique({
+        return (await prisma.courseRequirements.findUnique({
             where: { id },
             include: {
                 course: true,
@@ -39,37 +39,33 @@ export class CourseRequirementRepository extends BaseRepository {
     }
 
     public async getByIdNoPopulate(id: string): Promise<ICourseRequirementEntity | null> {
-        return (await prisma.courseRequirement.findUnique({ where: { id } })) as unknown as ICourseRequirementEntity;
+        return (await prisma.courseRequirements.findUnique({ where: { id } })) as unknown as ICourseRequirementEntity;
     }
 
     public async getByCode(code: string): Promise<ICourseRequirementEntity | null> {
-        return (await prisma.courseRequirement.findFirst({ where: { code } })) as unknown as ICourseRequirementEntity;
+        return (await prisma.courseRequirements.findFirst({ where: { code } })) as unknown as ICourseRequirementEntity;
     }
 
     public async getRoleRecord(role: number): Promise<ICourseRequirementEntity | null> {
         return null;
     }
 
-    public async getUserRoleRecord(): Promise<ICourseRequirementEntity | null> {
-        return null;
-    }
-
     public async getCourseMultipleId(courses: string[]) {
-        return await prisma.courseRequirement.findMany({ where: { id: { in: courses } } });
+        return await prisma.courseRequirements.findMany({ where: { id: { in: courses } } });
     }
 
     public async create(payload: ICourseRequirementEntity): Promise<ICourseRequirementEntity | null> {
         const { id, ...rest } = payload;
         const finalPayload: any = { ...rest };
         // Assuming payload has courseId if linking to course
-        const data: Prisma.CourseRequirementCreateInput = {
+        const data: Prisma.CourseRequirementsCreateInput = {
             id,
             title: rest.title,
             code: rest.code,
             description: rest.description,
             course: { connect: { id: finalPayload.course } }, // entity 'course' is string ID
         };
-        const res = await prisma.courseRequirement.create({ data });
+        const res = await prisma.courseRequirements.create({ data });
         return res as unknown as ICourseRequirementEntity;
     }
 
@@ -84,7 +80,7 @@ export class CourseRequirementRepository extends BaseRepository {
         if (courseId) {
             updateData.course = { connect: { id: courseId } };
         }
-        const res = await prisma.courseRequirement.update({
+        const res = await prisma.courseRequirements.update({
             where: { id },
             data: updateData,
         });
@@ -92,26 +88,26 @@ export class CourseRequirementRepository extends BaseRepository {
     }
 
     public async updateRecord(options: {
-        updateCondition: Prisma.CourseRequirementWhereUniqueInput;
-        updateQuery: Prisma.CourseRequirementUpdateInput;
+        updateCondition: Prisma.CourseRequirementsWhereUniqueInput;
+        updateQuery: Prisma.CourseRequirementsUpdateInput;
     }): Promise<ICourseRequirementEntity | null> {
-        return (await prisma.courseRequirement.update({
+        return (await prisma.courseRequirements.update({
             where: options.updateCondition,
             data: options.updateQuery,
         })) as unknown as ICourseRequirementEntity;
     }
 
     public async updateManyRecord(options: {
-        updateCondition: Prisma.CourseRequirementWhereInput;
-        updateQuery: Prisma.CourseRequirementUpdateManyMutationInput;
+        updateCondition: Prisma.CourseRequirementsWhereInput;
+        updateQuery: Prisma.CourseRequirementsUpdateManyMutationInput;
     }): Promise<Prisma.BatchPayload> {
-        return await prisma.courseRequirement.updateMany({
+        return await prisma.courseRequirements.updateMany({
             where: options.updateCondition,
             data: options.updateQuery,
         });
     }
 
     public async permanentlyDelete(id: string): Promise<ICourseRequirementEntity | null> {
-        return (await prisma.courseRequirement.delete({ where: { id } })) as unknown as ICourseRequirementEntity;
+        return (await prisma.courseRequirements.delete({ where: { id } })) as unknown as ICourseRequirementEntity;
     }
 }
