@@ -180,3 +180,8 @@ dist
 
 # Keys
 keys/
+
+# Build output
+api/
+dist/
+build/

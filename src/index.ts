@@ -37,12 +37,33 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(APP_PATH, rootRouter);
 
-Database.connect()
-    .then(() => {
-        app.listen(port, () => {
-            console.log(`Listening on port ${port}`);
+// Initialize database connection
+let isConnected = false;
+const initDatabase = async () => {
+    if (!isConnected) {
+        await Database.connect();
+        isConnected = true;
+    }
+};
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+    Database.connect()
+        .then(() => {
+            app.listen(port, () => {
+                console.log(`Listening on port ${port}`);
+            });
+        })
+        .catch((err) => {
+            console.log(err);
         });
-    })
-    .catch((err) => {
-        console.log(err);
-    });
+}
+
+// Export for Vercel serverless
+export default async (req: any, res: any) => {
+    await initDatabase();
+    return app(req, res);
+};
+
+// Also export the app for other uses
+export { app };

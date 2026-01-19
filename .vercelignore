@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+bun.lockb
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Development
+.vscode
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README.md
+docs
+
+# Scripts
+scripts
+
+# Keys
+keys
+
+# Prisma
+prisma/migrations
+
+# Build artifacts
+*.log
+.DS_Store
