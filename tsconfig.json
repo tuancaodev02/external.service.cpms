@@ -13,10 +13,10 @@
 
         /* Bundler mode */
         "moduleResolution": "Node",
-        "allowImportingTsExtensions": true,
+        "allowImportingTsExtensions": false,
         "allowSyntheticDefaultImports": true,
-        "verbatimModuleSyntax": true,
-        "noEmit": true,
+        "verbatimModuleSyntax": false,
+        "noEmit": false,
 
         /* Linting */
         "skipLibCheck": true,
