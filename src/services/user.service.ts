@@ -1,6 +1,7 @@
 import type { IPayloadGetListUser, IPayloadUpdateUser, IPayloadUserRegisterCourse } from '@/controllers/filters/user.filter';
 import { EnumUserCourseStatus } from '@/core/constants/common.constant';
 import { ValidatorInput } from '@/core/helpers/class-validator.helper';
+import { PermissionHelper } from '@/core/helpers/permission.helper';
 import { ResponseHandler } from '@/core/helpers/response-handler.helper';
 import type { IResponseServer } from '@/core/interfaces/common.interface';
 import { CoursesRegistering } from '@/database/entities/course-register.entity';
@@ -8,6 +9,7 @@ import { UserCourseModel } from '@/database/entities/user-course.entity';
 import { UserModel } from '@/database/entities/user.entity';
 import { CourseRegisterRepository } from '@/repositories/course-register.repository';
 import { CourseRepository } from '@/repositories/course.repository';
+import { RoleRepository } from '@/repositories/role.repository';
 import { UserCourseRepository } from '@/repositories/user-course.repository';
 import { UserRepository } from '@/repositories/user.repository';
 import { Prisma } from '@prisma/client';
@@ -16,6 +18,7 @@ import { v4 as uuidV4 } from 'uuid';
 
 export class UserService {
     private userRepository = new UserRepository();
+    private roleRepository = new RoleRepository();
     private courseRegisterRepository = new CourseRegisterRepository();
     private userCourseRepository = new UserCourseRepository();
     private courseRepository = new CourseRepository();
@@ -191,14 +194,24 @@ export class UserService {
         }
     }
 
-    public async update(payload: IPayloadUpdateUser): Promise<IResponseServer> {
+    public async update(payload: IPayloadUpdateUser, requesterRoles: number[]): Promise<IResponseServer> {
         try {
             const userRecord = await this.userRepository.getByIdNoPopulate(payload.id);
             if (!userRecord) {
                 return new ResponseHandler(404, true, 'User not found', userRecord);
             }
 
-            // Mongoose code had commented out parts for relations.
+            // Check permission if updating roles
+            let rolesToUpdate: string[] | undefined = undefined;
+            if (payload.roles && payload.roles.length > 0) {
+                const hasPermission = requesterRoles.some((role) => PermissionHelper.isRootAdmin(role));
+
+                if (!hasPermission) {
+                    return new ResponseHandler(403, false, 'Forbidden: You do not have permission to update roles.', null);
+                }
+
+                rolesToUpdate = await this.roleRepository.getIdsByRoleEnums(payload.roles);
+            }
 
             const newRecord = new UserModel({
                 id: payload.id,
@@ -208,7 +221,7 @@ export class UserService {
                 password: userRecord.password,
                 address: payload.address?.trim(),
                 phone: payload.phone?.trim(),
-                roles: userRecord.roles,
+                roles: userRecord.roles, // Keep old roles for validation object
                 refreshToken: userRecord.refreshToken,
                 updatedAt: moment().format(),
             });
@@ -225,10 +238,10 @@ export class UserService {
                     birthday: newRecord.birthday,
                     address: newRecord.address,
                     phone: newRecord.phone,
-                    userRoles: newRecord.roles
+                    userRoles: rolesToUpdate
                         ? {
                               deleteMany: {},
-                              create: newRecord.roles.map((roleId) => ({
+                              create: rolesToUpdate.map((roleId) => ({
                                   role: { connect: { id: roleId } },
                               })),
                           }
@@ -238,7 +251,7 @@ export class UserService {
             });
 
             if (!userRecordUpdated) return new ResponseHandler(500, false, 'Can not update user', null);
-            return new ResponseHandler(200, true, 'Update curriculum successfully', userRecordUpdated);
+            return new ResponseHandler(200, true, 'Update user successfully', userRecordUpdated);
         } catch (error) {
             console.log('error', error);
             return ResponseHandler.InternalServer();

@@ -53,9 +53,9 @@ export default class UserController {
 
     @Required(GetInfoUserFilterModel, EModePayload.PARAMS)
     @Required(UpdateUserFilterModel)
-    public async update(req: Request, res: Response): Promise<Response> {
+    public async update(req: RequestAuthorized, res: Response): Promise<Response> {
         const payload = Object.assign(req.body, req.params);
-        const result = await this.userService.update(payload);
+        const result = await this.userService.update(payload, req.user?.roles || []);
         return res.status(result.status).json(result);
     }
 

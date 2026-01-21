@@ -1,6 +1,6 @@
 import type { ICourseRegisteringEntity } from '@/database/entities/course-register.entity';
 import type { IUserEntity } from '@/database/entities/user.entity';
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class GetInfoUserFilterModel implements Partial<IUserEntity> {
     @IsUUID()
@@ -53,7 +53,9 @@ export class GetPagingUserFilterModel implements Partial<IPayloadGetListUser> {
 export type IPayloadUpdateUser = Omit<
     IUserEntity,
     'courses' | 'roles' | 'coursesRegistering' | 'createdAt' | 'refreshToken' | 'updatedAt'
-> & {};
+> & {
+    roles: number[];
+};
 
 export class CourseRegisterFilterModel implements Partial<IPayloadUpdateUser> {
     @IsString()
@@ -112,12 +114,18 @@ export class UpdateUserFilterModel implements Partial<IPayloadUpdateUser> {
     @IsNotEmpty()
     address?: string;
 
+    @IsArray()
+    @IsNumber()
+    @IsNotEmpty()
+    roles?: number[];
+
     constructor(payload: Partial<IPayloadUpdateUser>) {
         this.name = payload.name;
         this.email = payload.email;
         this.phone = payload.phone;
         this.birthday = payload.birthday;
         this.address = payload.address;
+        this.roles = payload.roles;
     }
 }
 

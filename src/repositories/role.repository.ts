@@ -53,4 +53,14 @@ export class RoleRepository extends BaseRepository {
         });
         return res as unknown as IRoleEntity;
     }
+
+    public async getIdsByRoleEnums(roles: number[]): Promise<string[]> {
+        const records = await prisma.roles.findMany({
+            where: {
+                role: { in: roles },
+            },
+            select: { id: true },
+        });
+        return records.map((r) => r.id);
+    }
 }
