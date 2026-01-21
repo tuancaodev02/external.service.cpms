@@ -2,11 +2,11 @@
     "name": "external.services.cpms",
     "module": "./src/index.ts",
     "type": "module",
-    "main": "dist/index.js",
+    "main": "./api/index.js",
     "scripts": {
         "dev": "bun --env-file=.env --hot ./src/index.ts",
-        "start": "bun --env-file=.env ./dist/index.js",
-        "build": "bun build ./src/index.ts --outdir ./dist --target=node --format=esm && prisma generate",
+        "start": "bun --env-file=.env ./api/index.js",
+        "build": "bun build ./src/index.ts --outdir ./api --target=node --format=esm --external @prisma/client && prisma generate",
         "vercel:deploy": "bun run build && vercel --prod",
         "vercel:deploy:preview": "bun run build && vercel",
         "test": "bun test --preload ./src/index.ts",
@@ -49,11 +49,6 @@
         "nodemailer": "^6.10.1",
         "reflect-metadata": "^0.2.2",
         "uuid": "^10.0.0"
-    },
-    "paths": {
-        "@/*": [
-            "dist/*"
-        ]
     },
     "prisma": {
         "seed": "bun ./prisma/seed.ts"
