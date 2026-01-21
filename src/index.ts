@@ -59,25 +59,14 @@ app.use(
 );
 
 // Initialize database connection
-let isConnected = false;
-const initDatabase = async () => {
-    if (!isConnected) {
-        await Database.connect();
-        isConnected = true;
-    }
-};
-
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-    Database.connect()
-        .then(() => {
-            app.listen(port, () => {
-                console.log(`Listening on port ${port}`);
-            });
-        })
-        .catch((err) => {
-            console.log(err);
+Database.connect()
+    .then(() => {
+        app.listen(port, () => {
+            console.log(`Listening on port ${port}`);
         });
-}
+    })
+    .catch((err) => {
+        console.log(err);
+    });
 
 export default app;
