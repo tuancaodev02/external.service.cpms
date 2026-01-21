@@ -22,5 +22,5 @@ COPY package*.json .
 
 RUN bun install
 
-COPY --from=development /usr/src/app/dist ./dist
-CMD [ "bun", "--env-file=.env" ,"dist/index.js" ]
+COPY --from=development /usr/src/app/api ./api
+CMD [ "bun", "--env-file=.env" ,"api/index.js" ]

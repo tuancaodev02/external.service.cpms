@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "baseUrl": ".",
-        "outDir": "dist",
+        "outDir": "api",
         "lib": ["ESNext", "DOM", "DOM.Iterable"],
         "target": "ESNext",
         "module": "ESNext",
