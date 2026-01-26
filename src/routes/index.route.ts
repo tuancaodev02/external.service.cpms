@@ -9,6 +9,7 @@ import facultyRouter from './faculty.route';
 import newsRouter from './news.route';
 import roleRouter from './role.route';
 import schoolRouter from './school.route';
+import scriptRouter from './script.route';
 import userRouter from './user.route';
 const rootRouter = Router();
 
@@ -22,6 +23,7 @@ rootRouter.use('/course-requirement', courseRequirement);
 rootRouter.use('/user', userRouter);
 rootRouter.use('/news', newsRouter);
 rootRouter.use('/admissions', admissionsRouter);
+rootRouter.use('/script', scriptRouter);
 rootRouter.use(
     '*',
     (req, res, next) => {
