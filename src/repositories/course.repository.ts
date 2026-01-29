@@ -107,6 +107,34 @@ export class CourseRepository extends BaseRepository {
     }
 
     public async permanentlyDelete(id: string): Promise<ICourseEntity | null> {
-        return (await prisma.courses.delete({ where: { id } })) as unknown as ICourseEntity;
+        return await prisma.$transaction(async (tx) => {
+            // 1. Delete all UserCourses related to this course
+            await tx.userCourses.deleteMany({
+                where: {
+                    courseId: id,
+                },
+            });
+
+            // 2. Delete all CourseRegisters related to this course
+            await tx.courseRegisters.deleteMany({
+                where: {
+                    courseId: id,
+                },
+            });
+
+            // 3. Delete all CourseRequirements related to this course
+            await tx.courseRequirements.deleteMany({
+                where: {
+                    courseId: id,
+                },
+            });
+
+            // 4. Finally delete the Course itself
+            const deletedCourse = await tx.courses.delete({
+                where: { id },
+            });
+
+            return deletedCourse as unknown as ICourseEntity;
+        });
     }
 }

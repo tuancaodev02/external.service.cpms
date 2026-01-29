@@ -136,7 +136,7 @@ export class CurriculumService {
                 faculties: facultyIds,
                 durationStart: payload.durationStart || curriculumRecord.durationStart,
                 durationEnd: payload.durationEnd || curriculumRecord.durationEnd,
-                createdAt: curriculumRecord.createdAt,
+                createdAt: moment(curriculumRecord.createdAt).format(),
                 updatedAt: moment().format(),
             });
             const validation = await this.validateInputService.validate(newCurriculum);

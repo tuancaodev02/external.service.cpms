@@ -97,6 +97,62 @@ export class CurriculumRepository extends BaseRepository {
     }
 
     public async permanentlyDelete(id: string): Promise<ICurriculumEntity | null> {
-        return (await prisma.curricula.delete({ where: { id } })) as unknown as ICurriculumEntity;
+        return await prisma.$transaction(async (tx) => {
+            // 1. Delete all UserCourses related to courses in faculties of this curriculum
+            await tx.userCourses.deleteMany({
+                where: {
+                    course: {
+                        faculty: {
+                            curriculumId: id,
+                        },
+                    },
+                },
+            });
+
+            // 2. Delete all CourseRegisters related to courses...
+            await tx.courseRegisters.deleteMany({
+                where: {
+                    course: {
+                        faculty: {
+                            curriculumId: id,
+                        },
+                    },
+                },
+            });
+
+            // 3. Delete all CourseRequirements related to courses...
+            await tx.courseRequirements.deleteMany({
+                where: {
+                    course: {
+                        faculty: {
+                            curriculumId: id,
+                        },
+                    },
+                },
+            });
+
+            // 4. Delete all Courses related to faculties of this curriculum
+            await tx.courses.deleteMany({
+                where: {
+                    faculty: {
+                        curriculumId: id,
+                    },
+                },
+            });
+
+            // 5. Delete all Faculties of this curriculum
+            await tx.faculties.deleteMany({
+                where: {
+                    curriculumId: id,
+                },
+            });
+
+            // 6. Finally delete the Curriculum itself
+            const deletedCurriculum = await tx.curricula.delete({
+                where: { id },
+            });
+
+            return deletedCurriculum as unknown as ICurriculumEntity;
+        });
     }
 }

@@ -299,8 +299,28 @@ export class UserRepository extends BaseRepository {
     }
 
     public async permanentlyDelete(id: string): Promise<IUserEntity | null> {
-        return (await prisma.users.delete({
-            where: { id },
-        })) as unknown as IUserEntity;
+        return await prisma.$transaction(async (tx) => {
+            // 1. Delete all UserCourses
+            await tx.userCourses.deleteMany({
+                where: { userId: id },
+            });
+
+            // 2. Delete all CourseRegistrations
+            await tx.courseRegisters.deleteMany({
+                where: { userId: id },
+            });
+
+            // 3. Delete all UserRoles
+            await tx.userRoles.deleteMany({
+                where: { userId: id },
+            });
+
+            // 4. Finally delete the User
+            const deletedUser = await tx.users.delete({
+                where: { id },
+            });
+
+            return deletedUser as unknown as IUserEntity;
+        });
     }
 }

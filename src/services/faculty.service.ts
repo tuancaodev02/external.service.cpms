@@ -4,6 +4,7 @@ import { ValidatorInput } from '@/core/helpers/class-validator.helper';
 import { ResponseHandler } from '@/core/helpers/response-handler.helper';
 import type { IResponseServer } from '@/core/interfaces/common.interface';
 import { FacultyModel } from '@/database/entities/faculty.entity';
+import { prisma } from '@/database/prisma.client';
 import { CourseRepository } from '@/repositories/course.repository';
 import { CurriculumRepository } from '@/repositories/curriculum.repository';
 
@@ -124,47 +125,85 @@ export class FacultyService {
                 return new ResponseHandler(404, true, `Faculty with id ${payload.id} not found`, facultyRecord);
             }
 
+            // Verify Curriculum exists if being updated
+            if (payload.curriculumId) {
+                const curriculum = await this.curriculumRepository.getByIdNoPopulate(payload.curriculumId);
+                if (!curriculum) return new ResponseHandler(404, true, 'Curriculum not found', null);
+            }
+
+            // Verify Courses exist if being updated
             let courseIds: string[] = [];
             if (payload.courseIds && payload.courseIds.length) {
-                const faculties = await this.courseRepository.getCourseMultipleId(payload.courseIds);
-                courseIds = faculties.map((faculty) => faculty.id);
+                const courses = await this.courseRepository.getCourseMultipleId(payload.courseIds);
+                courseIds = courses.map((c) => c.id);
+                // Check if any invalid course IDs? For now, we trust the valid ones found.
             }
 
             const facultyInstance = new FacultyModel({
                 id: payload.id,
-                title: payload.title.trim() || facultyRecord.title,
-                description: payload.description?.trim() || facultyRecord.title,
-                code: payload.code.trim() || facultyRecord.code,
-                courses: courseIds,
+                title: payload.title?.trim() || facultyRecord.title,
+                description: payload.description?.trim() || facultyRecord.description, // Fix typo: was facultyRecord.title
+                code: payload.code?.trim() || facultyRecord.code,
+                courses: payload.courseIds || facultyRecord.courses, // Use payload if present
                 durationStart: payload.durationStart || facultyRecord.durationStart,
                 durationEnd: payload.durationEnd || facultyRecord.durationEnd,
-                curriculum: payload.curriculumId,
-                thumbnailUrl: payload.thumbnailUrl,
+                curriculum: payload.curriculumId || facultyRecord.curriculum,
+                thumbnailUrl: payload.thumbnailUrl || facultyRecord.thumbnailUrl,
                 updatedAt: moment().format(),
             });
+
             const validation = await this.validateInputService.validate(facultyInstance);
             if (validation) return validation;
 
-            // Remove $pull logic.
+            // Use transaction for consistency
+            const result = await prisma.$transaction(async (tx) => {
+                // handle orphan courses
+                if (payload.courseIds) {
+                    const currentCourses = await tx.courses.findMany({
+                        where: { facultyId: facultyInstance.id },
+                        select: { id: true },
+                    });
 
-            const facultyRecordUpdated = await this.facultyRepository.updateRecord({
-                updateCondition: { id: facultyInstance.id },
-                updateQuery: {
-                    title: facultyInstance.title,
-                    description: facultyInstance.description,
-                    code: facultyInstance.code,
-                    durationStart: facultyInstance.durationStart,
-                    durationEnd: facultyInstance.durationEnd,
-                    thumbnailUrl: payload.thumbnailUrl,
-                    curriculum: { connect: { id: facultyInstance.curriculum } },
-                    updatedAt: facultyInstance.updatedAt,
-                    createdAt: facultyInstance.createdAt,
-                    courses: { connect: facultyInstance.courses.map((id) => ({ id })) },
-                },
+                    // Use lowercase for reliable comparison
+                    const newCourseIdsLower = payload.courseIds.map((id) => id.toLowerCase());
+                    const orphanCourseIds = currentCourses.map((c) => c.id).filter((id) => !newCourseIdsLower.includes(id.toLowerCase()));
+
+                    if (orphanCourseIds.length > 0) {
+                        // Cascading delete for orphans matches CourseRepository.permanentlyDelete logic
+                        // 1. UserCourses
+                        await tx.userCourses.deleteMany({ where: { courseId: { in: orphanCourseIds } } });
+                        // 2. CourseRegisters
+                        await tx.courseRegisters.deleteMany({ where: { courseId: { in: orphanCourseIds } } });
+                        // 3. CourseRequirements
+                        await tx.courseRequirements.deleteMany({ where: { courseId: { in: orphanCourseIds } } });
+                        // 4. Courses
+                        await tx.courses.deleteMany({ where: { id: { in: orphanCourseIds } } });
+                    }
+                }
+
+                // 1. Update Faculty fields
+                const updated = await tx.faculties.update({
+                    where: { id: facultyInstance.id },
+                    data: {
+                        title: facultyInstance.title,
+                        description: facultyInstance.description,
+                        code: facultyInstance.code,
+                        durationStart: facultyInstance.durationStart,
+                        durationEnd: facultyInstance.durationEnd,
+                        thumbnailUrl: facultyInstance.thumbnailUrl,
+                        updatedAt: facultyInstance.updatedAt,
+                        // Relation updates
+                        curriculum: payload.curriculumId ? { connect: { id: payload.curriculumId } } : undefined,
+                        courses: payload.courseIds ? { set: payload.courseIds.map((id) => ({ id })) } : undefined,
+                    },
+                    include: {
+                        courses: true, // Return populated to verify
+                    },
+                });
+                return updated;
             });
 
-            if (!facultyRecordUpdated) return new ResponseHandler(500, false, 'Can not update faculty record', null);
-            return new ResponseHandler(200, true, 'Update the faculty successfully', facultyRecordUpdated);
+            return new ResponseHandler(200, true, 'Update the faculty successfully', result);
         } catch (error) {
             console.log('error', error);
             return ResponseHandler.InternalServer();
