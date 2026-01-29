@@ -83,8 +83,8 @@ export class CurriculumService {
                 description: payload.description?.trim(),
                 code: payload.code.trim(),
                 faculties: facultyIds,
-                durationStart: payload.durationStart,
-                durationEnd: payload.durationEnd,
+                durationStart: moment(payload.durationStart).format(),
+                durationEnd: moment(payload.durationEnd).format(),
             });
             const validation = await this.validateInputService.validate(newCurriculum);
             if (validation) return validation;
@@ -134,8 +134,8 @@ export class CurriculumService {
                 description: payload.description?.trim() || curriculumRecord.title,
                 code: payload.code.trim() || curriculumRecord.code,
                 faculties: facultyIds,
-                durationStart: payload.durationStart || curriculumRecord.durationStart,
-                durationEnd: payload.durationEnd || curriculumRecord.durationEnd,
+                durationStart: moment(payload.durationStart || curriculumRecord.durationStart).format(),
+                durationEnd: moment(payload.durationEnd || curriculumRecord.durationEnd).format(),
                 createdAt: moment(curriculumRecord.createdAt).format(),
                 updatedAt: moment().format(),
             });

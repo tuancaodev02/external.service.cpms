@@ -80,8 +80,8 @@ export class FacultyService {
                 code: payload.code,
                 courses: payload.courseIds || [],
                 curriculum: payload.curriculumId,
-                durationStart: payload.durationStart,
-                durationEnd: payload.durationEnd,
+                durationStart: moment(payload.durationStart).format(),
+                durationEnd: moment(payload.durationEnd).format(),
                 title: payload.title.trim(),
                 description: payload.description?.trim(),
                 thumbnailUrl: payload.thumbnailUrl,
@@ -145,8 +145,8 @@ export class FacultyService {
                 description: payload.description?.trim() || facultyRecord.description, // Fix typo: was facultyRecord.title
                 code: payload.code?.trim() || facultyRecord.code,
                 courses: payload.courseIds || facultyRecord.courses, // Use payload if present
-                durationStart: payload.durationStart || facultyRecord.durationStart,
-                durationEnd: payload.durationEnd || facultyRecord.durationEnd,
+                durationStart: moment(payload.durationStart || facultyRecord.durationStart).format(),
+                durationEnd: moment(payload.durationEnd || facultyRecord.durationEnd).format(),
                 curriculum: payload.curriculumId || facultyRecord.curriculum,
                 thumbnailUrl: payload.thumbnailUrl || facultyRecord.thumbnailUrl,
                 updatedAt: moment().format(),
