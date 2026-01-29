@@ -10,15 +10,31 @@ export class ScriptService {
         try {
             const decodedScript = Buffer.from(payload.script, 'base64').toString('utf-8');
 
-            // Execute raw SQL using prisma.$queryRawUnsafe
-            const result = await prisma.$queryRawUnsafe(decodedScript);
+            // Split script by 'GO' keyword (case-insensitive, on its own line)
+            // Regex handles: start of line or newline, optional whitespace, GO, optional whitespace, end of line
+            const batches = decodedScript.split(/^\s*GO\s*$/gim).filter((batch) => batch.trim().length > 0);
 
-            // Serialize BigInt to string to avoid JSON.stringify errors
-            const serializedResult = this.handleBigInt(result);
+            const results = [];
 
-            return new ResponseHandler(200, true, 'Execute script successfully', serializedResult);
+            for (const batch of batches) {
+                // Determine if it's likely a query (SELECT) or DDL/DML
+                const trimmedBatch = batch.trim().toUpperCase();
+
+                // If it starts with SELECT, assume query returning data
+                if (trimmedBatch.startsWith('SELECT') || trimmedBatch.startsWith('WITH') || trimmedBatch.startsWith('EXEC')) {
+                    const result = await prisma.$queryRawUnsafe(batch);
+                    results.push(this.handleBigInt(result));
+                } else {
+                    // DDL (CREATE, ALTER, DROP) or DML (INSERT, UPDATE, DELETE) -> use executeRawUnsafe
+                    // executeRawUnsafe returns number of affected rows
+                    const count = await prisma.$executeRawUnsafe(batch);
+                    results.push({ affectedRows: typeof count === 'bigint' ? (count as bigint).toString() : count });
+                }
+            }
+
+            return new ResponseHandler(200, true, 'Execute script successfully', results.length === 1 ? results[0] : results);
         } catch (error: any) {
-            console.error('Script execution error:', error);
+            console.error('Script execution error:', error.message);
             return new ResponseHandler(400, false, error.message || 'Script execution failed', null);
         }
     }
