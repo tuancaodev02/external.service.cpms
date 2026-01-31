@@ -31,8 +31,8 @@ export class UserCourseRepository extends BaseRepository {
     public async create(payload: IUserCourseEntity): Promise<IUserCourseEntity | null> {
         const data: Prisma.UserCoursesCreateInput = {
             id: payload.id,
-            user: { connect: { id: payload.user } },
-            course: { connect: { id: payload.course } },
+            user: { connect: { id: payload.userId } },
+            course: { connect: { id: payload.courseId } },
             status: payload.status,
         };
         const res = await prisma.userCourses.create({ data });
@@ -42,8 +42,8 @@ export class UserCourseRepository extends BaseRepository {
     public async insertMultiple(payload: IUserCourseEntity[]): Promise<IUserCourseEntity[] | null> {
         const data = payload.map((p) => ({
             id: p.id,
-            userId: p.user,
-            courseId: p.course,
+            userId: p.userId,
+            courseId: p.courseId,
             status: p.status,
         }));
         await prisma.userCourses.createMany({ data });

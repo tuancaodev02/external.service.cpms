@@ -2,9 +2,9 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-valida
 
 export interface IUserCourseEntity {
     id: string;
-    user: string;
+    userId: string;
     status: number;
-    course: string;
+    courseId: string;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -16,11 +16,11 @@ export class UserCourseModel implements IUserCourseEntity {
 
     @IsUUID()
     @IsNotEmpty()
-    user: string;
+    userId: string;
 
     @IsUUID()
     @IsNotEmpty()
-    course: string;
+    courseId: string;
 
     @IsNumber()
     @IsNotEmpty()
@@ -36,8 +36,8 @@ export class UserCourseModel implements IUserCourseEntity {
 
     constructor(params: IUserCourseEntity) {
         this.id = params.id;
-        this.user = params.user;
-        this.course = params.course;
+        this.userId = params.userId;
+        this.courseId = params.courseId;
         this.status = params.status;
         this.createdAt = params.createdAt;
         this.updatedAt = params.updatedAt;

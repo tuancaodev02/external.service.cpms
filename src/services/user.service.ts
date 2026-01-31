@@ -102,8 +102,8 @@ export class UserService {
                 (courseId) =>
                     new CoursesRegistering({
                         id: uuidV4(),
-                        user: payload.userId,
-                        course: courseId,
+                        userId: payload.userId,
+                        courseId: courseId,
                     }),
             );
 
@@ -136,18 +136,33 @@ export class UserService {
             if (!courseRegisterRecord.length)
                 return new ResponseHandler(400, true, 'Course registration not is exits', courseRegisterRecord);
 
-            const userCourseRecords = courseRegisterRecord.map(
-                (record) =>
-                    new UserCourseModel({
-                        id: uuidV4(),
-                        user: record.user, // Assuming 'user' in entity is userId string
-                        course: record.course, // Assuming 'course' in entity is courseId string
-                        status: EnumUserCourseStatus.PROCESSING,
-                    }),
-            );
+            // Check for existing UserCourses to avoid unique constraint violation
+            const existingUserCourses = await this.userCourseRepository.getMetadataManyRecordQuery({
+                updateCondition: {
+                    userId: payload.userId,
+                    courseId: { in: payload.courseIds },
+                },
+            });
 
-            const newUserCourseRecords = await this.userCourseRepository.insertMultiple(userCourseRecords);
-            if (!newUserCourseRecords) return new ResponseHandler(500, false, 'Can not create new course register', null);
+            const existingCourseIds = new Set(existingUserCourses.map((uc) => uc.courseId));
+
+            // Filter out courses that are already in UserCourses
+            const userCourseRecords = courseRegisterRecord
+                .filter((record) => !existingCourseIds.has(record.courseId))
+                .map(
+                    (record) =>
+                        new UserCourseModel({
+                            id: uuidV4(),
+                            userId: record.userId,
+                            courseId: record.courseId,
+                            status: EnumUserCourseStatus.PROCESSING,
+                        }),
+                );
+
+            if (userCourseRecords.length > 0) {
+                const newUserCourseRecords = await this.userCourseRepository.insertMultiple(userCourseRecords);
+                if (!newUserCourseRecords) return new ResponseHandler(500, false, 'Can not create new course register', null);
+            }
 
             // Removed redundant userRepository.updateRecord with $addToSet/$pull
 

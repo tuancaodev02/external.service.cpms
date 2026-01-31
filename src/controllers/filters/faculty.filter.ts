@@ -67,7 +67,7 @@ export class CreateFacultyFilterModel implements Partial<IPayloadCreateFaculty> 
     code?: string;
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     description?: string;
 
     @IsString()
@@ -118,7 +118,7 @@ export class UpdateFacultyFilterModel implements Partial<IPayloadUpdateFaculty> 
     code?: string;
 
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     description?: string;
 
     @IsString()

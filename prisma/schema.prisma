@@ -102,7 +102,7 @@ model Curricula {
 model Faculties {
   id            String   @id @default(uuid())
   title         String
-  description   String
+  description   String?  
   code          String   @unique
   durationStart String
   durationEnd   String

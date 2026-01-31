@@ -3,7 +3,7 @@ import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validat
 export interface IFacultyEntity {
     id: string;
     title: string;
-    description: string;
+    description?: string;
     code: string;
     curriculum: string;
     durationStart: string;
@@ -24,8 +24,8 @@ export class FacultyModel implements IFacultyEntity {
     title: string;
 
     @IsString()
-    @IsNotEmpty()
-    description: string;
+    @IsOptional()
+    description?: string;
 
     @IsString()
     @IsNotEmpty()

@@ -116,7 +116,7 @@ export class UpdateUserFilterModel implements Partial<IPayloadUpdateUser> {
 
     @IsArray()
     @IsNumber()
-    @IsNotEmpty()
+    @IsOptional()
     roles?: number[];
 
     constructor(payload: Partial<IPayloadUpdateUser>) {

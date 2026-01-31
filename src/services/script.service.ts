@@ -18,7 +18,7 @@ export class ScriptService {
 
             for (const batch of batches) {
                 // Determine if it's likely a query (SELECT) or DDL/DML
-                const trimmedBatch = batch.trim().toUpperCase();
+                const trimmedBatch = this.removeSqlComments(batch).trim().toUpperCase();
 
                 // If it starts with SELECT, assume query returning data
                 if (trimmedBatch.startsWith('SELECT') || trimmedBatch.startsWith('WITH') || trimmedBatch.startsWith('EXEC')) {
@@ -63,5 +63,11 @@ export class ScriptService {
         }
 
         return data;
+    }
+
+    private removeSqlComments(sql: string): string {
+        return sql
+            .replace(/--.*$/gm, '') // Remove single-line comments
+            .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
     }
 }

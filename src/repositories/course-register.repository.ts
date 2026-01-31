@@ -45,25 +45,20 @@ export class CourseRegisterRepository extends BaseRepository {
     }
 
     public async create(payload: ICourseRegisteringEntity): Promise<ICourseRegisteringEntity | null> {
-        // Payload has user (userId) and course (courseId).
-        // Entity interface says `user: string`, `course: string` (IDs).
-        // Prisma model has `userId`, `courseId`.
         const data: Prisma.CourseRegistersCreateInput = {
             id: payload.id,
-            user: { connect: { id: payload.user } },
-            course: { connect: { id: payload.course } },
+            user: { connect: { id: payload.userId } },
+            course: { connect: { id: payload.courseId } },
         };
         const res = await prisma.courseRegisters.create({ data });
         return res as unknown as ICourseRegisteringEntity;
     }
 
     public async insertMultiple(payload: ICourseRegisteringEntity[]): Promise<ICourseRegisteringEntity[] | null> {
-        // Prisma createMany.
-        // payload comes with user and course strings.
         const data = payload.map((p) => ({
             id: p.id,
-            userId: p.user,
-            courseId: p.course,
+            userId: p.userId,
+            courseId: p.courseId,
         }));
 
         await prisma.courseRegisters.createMany({ data });
@@ -71,14 +66,11 @@ export class CourseRegisterRepository extends BaseRepository {
     }
 
     public async update(payload: ICourseRegisteringEntity): Promise<ICourseRegisteringEntity | null> {
-        const { id, user, course, ...rest } = payload;
-        // user and course are IDs.
+        const { id, userId, courseId, ...rest } = payload;
         const res = await prisma.courseRegisters.update({
             where: { id },
             data: {
                 ...rest,
-                // userId: user, // should rarely change
-                // courseId: course
             },
         });
         return res as unknown as ICourseRegisteringEntity;

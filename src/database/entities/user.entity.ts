@@ -77,7 +77,7 @@ export class UserModel implements IUserEntity {
         this.address = params.address;
         this.email = params.email;
         this.password = params.password;
-        this.roles = params.roles;
+        this.roles = params.roles || [];
         this.refreshToken = params.refreshToken;
         this.courses = params.courses;
         this.coursesRegistering = params.coursesRegistering;
